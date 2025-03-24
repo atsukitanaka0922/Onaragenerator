@@ -10,6 +10,9 @@ const AppContainer = styled.div`
   height: 100vh;
   overflow: hidden;
   position: relative;
+  touch-action: manipulation; /* タッチ操作の最適化 */
+  -webkit-overflow-scrolling: none; /* iOS のスクロール慣性を無効化 */
+  overscroll-behavior: none; /* オーバースクロール動作を無効化 */
 `;
 
 const StartScreen = styled.div`
@@ -64,57 +67,67 @@ function App() {
   const [isCreatingSmoke, setIsCreatingSmoke] = useState(false);
   
   // 効果音関連の状態
-  const [selectedSoundUrl, setSelectedSoundUrl] = useState('/sounds/small1.mp3');
-  const [selectedSoundGenre, setSelectedSoundGenre] = useState('pop');
+  const [selectedSoundUrl, setSelectedSoundUrl] = useState('/sounds/pop1.mp3');
+  const [selectedSoundGenre, setSelectedSoundGenre] = useState('medium');
   const [isRandomSoundInGenre, setIsRandomSoundInGenre] = useState(false);
 
   // ジャンルごとに効果音を分類
   const soundGenres = [
-  {
-    id: 'small',
-    name: 'Small',
-    description: '小さくて軽快な効果音'
-  },
-  {
-    id: 'medium',
-    name: 'Medium',
-    description: '中程度の大きさの効果音'
-  },
-  {
-    id: 'big',
-    name: 'Big',
-    description: '大きな効果音'
-  },
-  {
-    id: 'sneaky',
-    name: 'Sneaky',
-    description: 'こっそりとした不思議な効果音'
-  }
-];
+    {
+      id: 'small',
+      name: 'Small',
+      description: '小さくて軽快な効果音'
+    },
+    {
+      id: 'medium',
+      name: 'Medium',
+      description: '中程度の大きさの効果音'
+    },
+    {
+      id: 'big',
+      name: 'Big',
+      description: '大きな効果音'
+    },
+    {
+      id: 'huge',
+      name: 'Huge',
+      description: '非常に大きな効果音'
+    },
+    {
+      id: 'sneaky',
+      name: 'Sneaky',
+      description: 'こっそりとした不思議な効果音'
+    }
+  ];
 
   // ジャンルごとの効果音のリスト
   const soundsByGenre = {
-  small: [
-    { id: 'small1', url: '/sounds/small1.mp3', name: 'Small 1' },
-    { id: 'small2', url: '/sounds/small2.mp3', name: 'Small 2' },
-    { id: 'small3', url: '/sounds/small3.mp3', name: 'Small 3' }
-  ],
-  medium: [
-    { id: 'medium1', url: '/sounds/medium1.mp3', name: 'Medium 1' },
-    { id: 'medium2', url: '/sounds/medium2.mp3', name: 'Medium 2' },
-    { id: 'medium3', url: '/sounds/medium3.mp3', name: 'Medium 3' }
-  ],
-  big: [
-    { id: 'big1', url: '/sounds/big1.mp3', name: 'Big 1' },
-    { id: 'big2', url: '/sounds/big2.mp3', name: 'Big 2' },
-    { id: 'big3', url: '/sounds/big3.mp3', name: 'Big 3' }
-  ],
-  sneaky: [
-    { id: 'sneaky1', url: '/sounds/sneaky1.mp3', name: 'Sneaky 1' },
-    { id: 'sneaky2', url: '/sounds/sneaky2.mp3', name: 'Sneaky 2' },
-    { id: 'sneaky3', url: '/sounds/sneaky3.mp3', name: 'Sneaky 3' }
-  ]
-};
+    small: [
+      { id: 'small1', url: '/sounds/pop1.mp3', name: 'Small 1' },
+      { id: 'small2', url: '/sounds/pop2.mp3', name: 'Small 2' },
+      { id: 'small3', url: '/sounds/pop3.mp3', name: 'Small 3' }
+    ],
+    medium: [
+      { id: 'medium1', url: '/sounds/pop1.mp3', name: 'Medium 1' },
+      { id: 'medium2', url: '/sounds/pop2.mp3', name: 'Medium 2' },
+      { id: 'medium3', url: '/sounds/pop3.mp3', name: 'Medium 3' }
+    ],
+    big: [
+      { id: 'big1', url: '/sounds/pop1.mp3', name: 'Big 1' },
+      { id: 'big2', url: '/sounds/pop2.mp3', name: 'Big 2' },
+      { id: 'big3', url: '/sounds/pop3.mp3', name: 'Big 3' }
+    ],
+    huge: [
+      { id: 'huge1', url: '/sounds/pop1.mp3', name: 'Huge 1' },
+      { id: 'huge2', url: '/sounds/pop2.mp3', name: 'Huge 2' },
+      { id: 'huge3', url: '/sounds/pop3.mp3', name: 'Huge 3' }
+    ],
+    sneaky: [
+      { id: 'sneaky1', url: '/sounds/pop1.mp3', name: 'Sneaky 1' },
+      { id: 'sneaky2', url: '/sounds/pop2.mp3', name: 'Sneaky 2' },
+      { id: 'sneaky3', url: '/sounds/pop3.mp3', name: 'Sneaky 3' }
+    ]
+  };
   
   // ジャンルからランダムに効果音を選択する関数
   const getRandomSoundFromGenre = useCallback((genreId) => {
@@ -396,7 +409,7 @@ function App() {
         setIsCreatingSmoke(false);
       }, 300);
     }
-  }, [isCreatingSmoke, spawnPoints, isSoundOn, selectedSoundUrl, selectedSoundGenre, isRandomSoundInGenre, getRandomSoundFromGenre, smokeSettings, addParticle, addSpawnPoint]);
+  }, [isCreatingSmoke, spawnPoints, isSoundOn, selectedSoundUrl, isRandomSoundInGenre, getRandomSoundFromGenre, selectedSoundGenre, smokeSettings, addParticle, addSpawnPoint]);
 
   // メイン画面のクリックイベント処理関数
   const handleInteraction = useCallback((x, y) => {
@@ -440,9 +453,9 @@ function App() {
     <AppContainer>
       {!isStarted ? (
         <StartScreen>
-          <Title>おならじぇねれーたー</Title>
-          <Description>画面をタップしてかわいいあの子におならを発生させよう！</Description>
-          <Description>⚙️ボタンで背景とおならの詳細設定、📍ボタンでおならの発生地点を設定できます</Description>
+          <Title>高機能煙エフェクトアプリ</Title>
+          <Description>画面をタップして煙を発生させよう！</Description>
+          <Description>⚙️ボタンで背景と煙の詳細設定、📍ボタンで煙の発生地点を設定できます</Description>
           <StartButton onClick={startApp}>スタート</StartButton>
         </StartScreen>
       ) : (
@@ -452,7 +465,7 @@ function App() {
             onInteraction={handleInteraction}
             isSettingSpawn={isSettingSpawn}
           >
-            {/* スポーン地点 - ドラッグ機能を追加 */}
+            {/* スポーン地点 - ドラッグ機能とタッチサポートを追加 */}
             {spawnPoints.map(point => (
               <div 
                 key={point.id}
@@ -470,7 +483,8 @@ function App() {
                   left: `${point.x}px`,
                   top: `${point.y}px`,
                   zIndex: 10,
-                  cursor: isSettingSpawn ? 'move' : 'default'
+                  cursor: isSettingSpawn ? 'move' : 'default',
+                  touchAction: 'none' /* タッチ操作時のブラウザのデフォルト動作を無効化 */
                 }}
                 onMouseDown={isSettingSpawn ? (e) => {
                   // ドラッグ開始
@@ -492,6 +506,38 @@ function App() {
                   
                   document.addEventListener('mousemove', handleMouseMove);
                   document.addEventListener('mouseup', handleMouseUp);
+                  
+                  e.preventDefault();
+                  e.stopPropagation();
+                } : undefined}
+                onTouchStart={isSettingSpawn ? (e) => {
+                  // タッチドラッグ開始
+                  if (e.touches.length !== 1) return; // シングルタッチのみ処理
+                  
+                  const touch = e.touches[0];
+                  const startX = touch.clientX;
+                  const startY = touch.clientY;
+                  const startPointX = point.x;
+                  const startPointY = point.y;
+                  
+                  const handleTouchMove = (moveEvent) => {
+                    // スクロールを防止
+                    moveEvent.preventDefault();
+                    
+                    if (moveEvent.touches.length !== 1) return;
+                    const moveTouch = moveEvent.touches[0];
+                    const dx = moveTouch.clientX - startX;
+                    const dy = moveTouch.clientY - startY;
+                    handleSpawnPointDrag(point.id, startPointX + dx, startPointY + dy);
+                  };
+                  
+                  const handleTouchEnd = () => {
+                    document.removeEventListener('touchmove', handleTouchMove);
+                    document.removeEventListener('touchend', handleTouchEnd);
+                  };
+                  
+                  document.addEventListener('touchmove', handleTouchMove, { passive: false });
+                  document.addEventListener('touchend', handleTouchEnd);
                   
                   e.preventDefault();
                   e.stopPropagation();
@@ -542,7 +588,6 @@ function App() {
                         const randomColor = colors[Math.floor(Math.random() * colors.length)];
                         el.style.backgroundColor = randomColor;
                       }
-                      // ストライプモードの場合は個別のパーティクルに適用が難しいため省略
                     }, 10);
                   }
                 }}

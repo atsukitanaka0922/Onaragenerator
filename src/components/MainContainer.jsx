@@ -1,15 +1,16 @@
 import { useRef } from 'react';
 import styled from 'styled-components';
 
-// コンポーネント外でスタイル定義
+// コンポーネント外でスタイル定義を修正
 const Container = styled.div`
   width: 100%;
   height: 100%;
   position: relative;
   background-image: ${props => props.backgroundImage ? `url(${props.backgroundImage})` : 'linear-gradient(to bottom, #87CEEB, #E0F7FA)'};
-  background-size: auto;
-  background-repeat: no-repeat;
+  background-size: contain; /* auto から contain に変更 */
   background-position: center;
+  background-repeat: no-repeat; /* 繰り返さない */
+  background-color: #000; /* 背景色を追加（画像が画面全体を覆わない場合） */
   overflow: hidden;
 `;
 
