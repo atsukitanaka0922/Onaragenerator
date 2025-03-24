@@ -5,13 +5,16 @@ import styled from 'styled-components';
 const Container = styled.div`
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   position: relative;
   background-image: ${props => props.backgroundImage ? `url(${props.backgroundImage})` : 'linear-gradient(to bottom, #87CEEB, #E0F7FA)'};
-  background-size: contain; /* auto から contain に変更 */
+  background-size: contain;
   background-position: center;
-  background-repeat: no-repeat; /* 繰り返さない */
-  background-color: #000; /* 背景色を追加（画像が画面全体を覆わない場合） */
+  background-repeat: no-repeat;
+  background-color: #000;
   overflow: hidden;
+  box-sizing: border-box;
 `;
 
 function MainContainer({ 

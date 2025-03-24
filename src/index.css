@@ -13,10 +13,19 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
+/* グローバルリセット */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 body {
@@ -27,12 +36,15 @@ body {
   min-height: 100vh;
   overflow: hidden;
   touch-action: manipulation;
+  -webkit-overflow-scrolling: none;
+  overscroll-behavior: none;
 }
 
 #root {
   width: 100%;
   height: 100vh;
-  margin: 0 auto;
+  margin: 0;
+  padding: 0;
   text-align: center;
 }
 
