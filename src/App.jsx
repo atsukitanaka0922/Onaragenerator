@@ -70,7 +70,7 @@ function App() {
   const [isCreatingSmoke, setIsCreatingSmoke] = useState(false);
   
   // 効果音関連の状態
-  const [selectedSoundUrl, setSelectedSoundUrl] = useState('/sounds/pop1.mp3');
+  const [selectedSoundUrl, setSelectedSoundUrl] = useState('/sounds/small1.mp3');
   const [selectedSoundGenre, setSelectedSoundGenre] = useState('medium');
   const [isRandomSoundInGenre, setIsRandomSoundInGenre] = useState(false);
 
@@ -99,36 +99,31 @@ function App() {
     {
       id: 'sneaky',
       name: 'Sneaky',
-      description: 'こっそりとした不思議な効果音'
+      description: 'こっそりとした効果音'
     }
   ];
 
   // ジャンルごとの効果音のリスト
   const soundsByGenre = {
     small: [
-      { id: 'small1', url: '/sounds/pop1.mp3', name: 'Small 1' },
-      { id: 'small2', url: '/sounds/pop2.mp3', name: 'Small 2' },
-      { id: 'small3', url: '/sounds/pop3.mp3', name: 'Small 3' }
+      { id: 'small1', url: '/sounds/small1.mp3', name: 'Small 1' },
+      { id: 'small2', url: '/sounds/small2.mp3', name: 'Small 2' },
+      { id: 'small3', url: '/sounds/small3.mp3', name: 'Small 3' }
     ],
     medium: [
-      { id: 'medium1', url: '/sounds/pop1.mp3', name: 'Medium 1' },
-      { id: 'medium2', url: '/sounds/pop2.mp3', name: 'Medium 2' },
-      { id: 'medium3', url: '/sounds/pop3.mp3', name: 'Medium 3' }
+      { id: 'medium1', url: '/sounds/medium1.mp3', name: 'Medium 1' },
+      { id: 'medium2', url: '/sounds/medium2.mp3', name: 'Medium 2' },
+      { id: 'medium3', url: '/sounds/medium3.mp3', name: 'Medium 3' }
     ],
     big: [
-      { id: 'big1', url: '/sounds/pop1.mp3', name: 'Big 1' },
-      { id: 'big2', url: '/sounds/pop2.mp3', name: 'Big 2' },
-      { id: 'big3', url: '/sounds/pop3.mp3', name: 'Big 3' }
-    ],
-    huge: [
-      { id: 'huge1', url: '/sounds/pop1.mp3', name: 'Huge 1' },
-      { id: 'huge2', url: '/sounds/pop2.mp3', name: 'Huge 2' },
-      { id: 'huge3', url: '/sounds/pop3.mp3', name: 'Huge 3' }
+      { id: 'big1', url: '/sounds/big1.mp3', name: 'Big 1' },
+      { id: 'big2', url: '/sounds/big2.mp3', name: 'Big 2' },
+      { id: 'big3', url: '/sounds/big3.mp3', name: 'Big 3' }
     ],
     sneaky: [
-      { id: 'sneaky1', url: '/sounds/pop1.mp3', name: 'Sneaky 1' },
-      { id: 'sneaky2', url: '/sounds/pop2.mp3', name: 'Sneaky 2' },
-      { id: 'sneaky3', url: '/sounds/pop3.mp3', name: 'Sneaky 3' }
+      { id: 'sneaky1', url: '/sounds/sneaky1.mp3', name: 'Sneaky 1' },
+      { id: 'sneaky2', url: '/sounds/sneaky2.mp3', name: 'Sneaky 2' },
+      { id: 'sneaky3', url: '/sounds/sneaky3.mp3', name: 'Sneaky 3' }
     ]
   };
   
@@ -456,9 +451,9 @@ function App() {
     <AppContainer>
       {!isStarted ? (
         <StartScreen>
-          <Title>高機能煙エフェクトアプリ</Title>
-          <Description>画面をタップして煙を発生させよう！</Description>
-          <Description>⚙️ボタンで背景と煙の詳細設定、📍ボタンで煙の発生地点を設定できます</Description>
+          <Title>おならじぇねれーたー</Title>
+          <Description>画面をタップしてかわいいあの子におならを発生させよう！</Description>
+          <Description>⚙️ボタンで背景とおならの詳細設定、📍ボタンでおならの発生地点を設定できます</Description>
           <StartButton onClick={startApp}>スタート</StartButton>
         </StartScreen>
       ) : (
