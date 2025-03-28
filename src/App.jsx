@@ -92,14 +92,14 @@ function App() {
       description: '大きな効果音'
     },
     {
-      id: 'huge',
-      name: 'Huge',
-      description: '非常に大きな効果音'
+      id: 'dirty',
+      name: 'Dirty',
+      description: '汚めな効果音'
     },
     {
       id: 'sneaky',
       name: 'Sneaky',
-      description: 'こっそりとした効果音'
+      description: 'すかしっぺ'
     }
   ];
 
@@ -108,22 +108,72 @@ function App() {
     small: [
       { id: 'small1', url: '/sounds/small1.mp3', name: 'Small 1' },
       { id: 'small2', url: '/sounds/small2.mp3', name: 'Small 2' },
-      { id: 'small3', url: '/sounds/small3.mp3', name: 'Small 3' }
+      { id: 'small3', url: '/sounds/small3.mp3', name: 'Small 3' },
+      { id: 'small4', url: '/sounds/small4.mp3', name: 'Small 4' },
+      { id: 'small5', url: '/sounds/small5.mp3', name: 'Small 5' },
+      { id: 'small6', url: '/sounds/small6.mp3', name: 'Small 6' },
+      { id: 'small7', url: '/sounds/small7.mp3', name: 'Small 7' },
+      { id: 'small8', url: '/sounds/small8.mp3', name: 'Small 8' },
+      { id: 'small9', url: '/sounds/small9.mp3', name: 'Small 9' },
+      { id: 'small10', url: '/sounds/small10.mp3', name: 'Small 10' },
+      { id: 'small11', url: '/sounds/small11.mp3', name: 'Small 11' },
+      { id: 'small12', url: '/sounds/small12.mp3', name: 'Small 12' },
+      { id: 'small13', url: '/sounds/small13.mp3', name: 'Small 13' },
+      { id: 'small14', url: '/sounds/small14.mp3', name: 'Small 14' },
+      { id: 'small15', url: '/sounds/small15.mp3', name: 'Small 15' }
     ],
     medium: [
       { id: 'medium1', url: '/sounds/medium1.mp3', name: 'Medium 1' },
       { id: 'medium2', url: '/sounds/medium2.mp3', name: 'Medium 2' },
-      { id: 'medium3', url: '/sounds/medium3.mp3', name: 'Medium 3' }
+      { id: 'medium3', url: '/sounds/medium3.mp3', name: 'Medium 3' },
+      { id: 'medium4', url: '/sounds/medium4.mp3', name: 'Medium 4' },
+      { id: 'medium5', url: '/sounds/medium5.mp3', name: 'Medium 5' },
+      { id: 'medium6', url: '/sounds/medium6.mp3', name: 'Medium 6' },
+      { id: 'medium7', url: '/sounds/medium7.mp3', name: 'Medium 7' },
+      { id: 'medium8', url: '/sounds/medium8.mp3', name: 'Medium 8' },
+      { id: 'medium9', url: '/sounds/medium9.mp3', name: 'Medium 9' },
+      { id: 'medium10', url: '/sounds/medium10.mp3', name: 'Medium 10' },
+      { id: 'medium11', url: '/sounds/medium11.mp3', name: 'Medium 11' },
+      { id: 'medium12', url: '/sounds/medium12.mp3', name: 'Medium 12' },
+      { id: 'medium13', url: '/sounds/medium13.mp3', name: 'Medium 13' },
+      { id: 'medium14', url: '/sounds/medium14.mp3', name: 'Medium 14' },
+      { id: 'medium15', url: '/sounds/medium15.mp3', name: 'Medium 15' },
+      { id: 'medium16', url: '/sounds/medium16.mp3', name: 'Medium 16' },
+      { id: 'medium17', url: '/sounds/medium17.mp3', name: 'Medium 17' }
     ],
     big: [
       { id: 'big1', url: '/sounds/big1.mp3', name: 'Big 1' },
       { id: 'big2', url: '/sounds/big2.mp3', name: 'Big 2' },
-      { id: 'big3', url: '/sounds/big3.mp3', name: 'Big 3' }
+      { id: 'big3', url: '/sounds/big3.mp3', name: 'Big 3' },
+      { id: 'big4', url: '/sounds/big4.mp3', name: 'Big 4' },
+      { id: 'big5', url: '/sounds/big5.mp3', name: 'Big 5' },
+      { id: 'big6', url: '/sounds/big6.mp3', name: 'Big 6' },
+      { id: 'big7', url: '/sounds/big7.mp3', name: 'Big 7' },
+      { id: 'big8', url: '/sounds/big8.mp3', name: 'Big 8' },
+      { id: 'big9', url: '/sounds/big9.mp3', name: 'Big 9' },
+      { id: 'big10', url: '/sounds/big10.mp3', name: 'Big 10' },
+    ],
+    dirty: [
+      { id: 'dirty1', url: '/sounds/dirty1.mp3', name: 'dirty 1' },
+      { id: 'dirty2', url: '/sounds/dirty2.mp3', name: 'dirty 2' },
+      { id: 'dirty3', url: '/sounds/dirty3.mp3', name: 'dirty 3' },
+      { id: 'dirty4', url: '/sounds/dirty4.mp3', name: 'dirty 4' },
+      { id: 'dirty5', url: '/sounds/dirty5.mp3', name: 'dirty 5' },
+      { id: 'dirty6', url: '/sounds/dirty6.mp3', name: 'dirty 6' },
+      { id: 'dirty7', url: '/sounds/dirty7.mp3', name: 'dirty 7' },
+      { id: 'dirty8', url: '/sounds/dirty8.mp3', name: 'dirty 8' },
+      { id: 'dirty9', url: '/sounds/dirty9.mp3', name: 'dirty 9' },
+      { id: 'dirty10', url: '/sounds/dirty10.mp3', name: 'dirty 10' },
+      { id: 'dirty11', url: '/sounds/dirty11.mp3', name: 'dirty 11' },
+      { id: 'dirty12', url: '/sounds/dirty12.mp3', name: 'dirty 12' },
+      { id: 'dirty13', url: '/sounds/dirty13.mp3', name: 'dirty 13' },
+      { id: 'dirty14', url: '/sounds/dirty14.mp3', name: 'dirty 14' }
     ],
     sneaky: [
       { id: 'sneaky1', url: '/sounds/sneaky1.mp3', name: 'Sneaky 1' },
       { id: 'sneaky2', url: '/sounds/sneaky2.mp3', name: 'Sneaky 2' },
-      { id: 'sneaky3', url: '/sounds/sneaky3.mp3', name: 'Sneaky 3' }
+      { id: 'sneaky3', url: '/sounds/sneaky3.mp3', name: 'Sneaky 3' },
+      { id: 'sneaky4', url: '/sounds/sneaky4.mp3', name: 'Sneaky 4' }
     ]
   };
   

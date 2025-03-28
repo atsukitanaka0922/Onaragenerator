@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 
 const SettingsGroup = styled.div`
@@ -32,6 +32,68 @@ const ColorInput = styled.input`
   visibility: hidden;
 `;
 
+const ColorPickerPopup = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: ${props => props.show ? 'flex' : 'none'};
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+const PopupContent = styled.div`
+  background-color: #333;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 300px;
+`;
+
+const ColorGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+`;
+
+const ColorOption = styled.div`
+  width: 100%;
+  padding-bottom: 100%; /* 正方形にする */
+  border-radius: 5px;
+  background-color: ${props => props.color};
+  cursor: pointer;
+  position: relative;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+`;
+
+const CustomColorInput = styled.input`
+  width: 100%;
+  height: 40px;
+  margin-bottom: 15px;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+`;
+
+const Button = styled.button`
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: ${props => props.primary ? '#4CAF50' : '#f44336'};
+  color: white;
+`;
+
 const BlendOptionsContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -61,20 +123,56 @@ const GradientPreview = styled.div`
   background: ${props => props.gradient};
 `;
 
+// 基本カラーパレット
+const colorPalette = [
+  '#ff0000', '#ff4500', '#ffa500', '#ffff00', '#ffeb3b', 
+  '#00ff00', '#00fa9a', '#00ffff', '#00bfff', '#0000ff',
+  '#8a2be2', '#9400d3', '#ff00ff', '#ff69b4', '#ff1493',
+  '#ffffff', '#c0c0c0', '#808080', '#404040', '#000000'
+];
+
 function ColorSettings({ colorSettings, setColorSettings }) {
-  // 色の変更ハンドラ
-  const handleMainColorChange = (e) => {
-    setColorSettings({
-      ...colorSettings,
-      mainColor: e.target.value
-    });
+  // モーダル状態
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [currentEditingColor, setCurrentEditingColor] = useState('main'); // 'main' または 'sub'
+  const [tempColor, setTempColor] = useState('#ffffff');
+  
+  // カラーピッカーを開く
+  const openColorPicker = (colorType) => {
+    setCurrentEditingColor(colorType);
+    setTempColor(colorType === 'main' ? colorSettings.mainColor : colorSettings.subColor);
+    setShowColorPicker(true);
   };
   
-  const handleSubColorChange = (e) => {
-    setColorSettings({
-      ...colorSettings,
-      subColor: e.target.value
-    });
+  // カラーピッカーを閉じる
+  const closeColorPicker = () => {
+    setShowColorPicker(false);
+  };
+  
+  // 色を選択して適用
+  const applyColor = () => {
+    if (currentEditingColor === 'main') {
+      setColorSettings({
+        ...colorSettings,
+        mainColor: tempColor
+      });
+    } else {
+      setColorSettings({
+        ...colorSettings,
+        subColor: tempColor
+      });
+    }
+    closeColorPicker();
+  };
+  
+  // パレットから色を選択
+  const selectPaletteColor = (color) => {
+    setTempColor(color);
+  };
+  
+  // カスタム色の入力
+  const handleCustomColorChange = (e) => {
+    setTempColor(e.target.value);
   };
   
   // ブレンドモード変更ハンドラ
@@ -114,13 +212,7 @@ function ColorSettings({ colorSettings, setColorSettings }) {
         <ColorLabel>メインカラー:</ColorLabel>
         <ColorPreview 
           color={colorSettings.mainColor} 
-          onClick={() => document.getElementById('main-color-input').click()} 
-        />
-        <ColorInput 
-          id="main-color-input"
-          type="color" 
-          value={colorSettings.mainColor} 
-          onChange={handleMainColorChange} 
+          onClick={() => openColorPicker('main')}
         />
       </ColorSlot>
       
@@ -129,13 +221,7 @@ function ColorSettings({ colorSettings, setColorSettings }) {
         <ColorLabel>サブカラー:</ColorLabel>
         <ColorPreview 
           color={colorSettings.subColor} 
-          onClick={() => document.getElementById('sub-color-input').click()} 
-        />
-        <ColorInput 
-          id="sub-color-input"
-          type="color" 
-          value={colorSettings.subColor} 
-          onChange={handleSubColorChange} 
+          onClick={() => openColorPicker('sub')}
         />
       </ColorSlot>
       
@@ -172,6 +258,56 @@ function ColorSettings({ colorSettings, setColorSettings }) {
       
       {/* グラデーションプレビュー */}
       <GradientPreview gradient={getGradientPreview()} />
+      
+      {/* カラーピッカーモーダル */}
+      <ColorPickerPopup show={showColorPicker}>
+        <PopupContent>
+          <h3 style={{ marginBottom: '15px', textAlign: 'center' }}>
+            {currentEditingColor === 'main' ? 'メインカラーを選択' : 'サブカラーを選択'}
+          </h3>
+          
+          <ColorGrid>
+            {colorPalette.map((color, index) => (
+              <ColorOption 
+                key={index} 
+                color={color} 
+                onClick={() => selectPaletteColor(color)}
+                style={{ 
+                  border: color === tempColor ? '2px solid white' : 'none',
+                  boxShadow: color === tempColor ? '0 0 5px white' : 'none'
+                }}
+              />
+            ))}
+          </ColorGrid>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>カスタムカラー:</label>
+            <CustomColorInput 
+              type="color" 
+              value={tempColor}
+              onChange={handleCustomColorChange}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+            <ColorPreview 
+              color={tempColor} 
+              style={{ 
+                width: '50px', 
+                height: '50px', 
+                margin: '0 auto',
+                border: '3px solid white'
+              }} 
+            />
+            <div style={{ marginTop: '5px' }}>{tempColor}</div>
+          </div>
+          
+          <ButtonContainer>
+            <Button onClick={closeColorPicker}>キャンセル</Button>
+            <Button primary onClick={applyColor}>適用</Button>
+          </ButtonContainer>
+        </PopupContent>
+      </ColorPickerPopup>
     </SettingsGroup>
   );
 }
