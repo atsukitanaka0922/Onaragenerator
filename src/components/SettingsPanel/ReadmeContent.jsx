@@ -68,6 +68,8 @@ function ReadmeContent() {
           <ListItem><Highlight>螺旋</Highlight>: 螺旋状に煙が広がります</ListItem>
           <ListItem><Highlight>噴水</Highlight>: 上方向に煙が噴き出します</ListItem>
           <ListItem><Highlight>リング</Highlight>: 円形に煙が広がります</ListItem>
+          <ListItem><Highlight>泡</Highlight>: お風呂のような泡が上昇し、弾けます</ListItem>
+          <ListItem><Highlight>霧</Highlight>: もやもやとした霧状のおならが広がります</ListItem>
         </List>
       </Section>
       
@@ -107,7 +109,7 @@ function ReadmeContent() {
       
       <Section>
         <SectionTitle>バージョン情報</SectionTitle>
-        <p>おならじぇねれーたー v1.1.0</p>
+        <p>おならじぇねれーたー v1.2.0</p>
         <p>バグ報告や要望などはXアカウント@Onara_generatorまで</p>
         <p>© 2025 とあるフェチクリエイター</p>
       </Section>

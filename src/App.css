@@ -47,6 +47,22 @@
   }
 }
 
+@keyframes bubble-wobble {
+  0% {
+    transform: translate(-50%, -50%) translateX(-5px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateX(5px);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateX(-5px);
+  }
+}
+
+.bubble-particle {
+  animation: bubble-wobble 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;

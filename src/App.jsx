@@ -262,6 +262,138 @@ function App() {
     console.log("すべてのスポーン地点を削除しました");
   };
   
+  // 泡エフェクト生成関数
+  const createBubbleEffect = (spawn, targetX, targetY, particleCount, settings) => {
+    console.log(`スポーン地点 ${spawn.id} から泡エフェクトを生成`);
+    
+    for (let i = 0; i < particleCount; i++) {
+      // 上昇角度をランダムに（垂直方向を中心に少しずれる）
+      const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI/4;
+      
+      // 上昇距離をランダムに
+      const distance = 100 + Math.random() * 150;
+      
+      // 目標位置を計算
+      const bubbleTargetX = spawn.x + Math.cos(angle) * distance * (Math.random() * 0.5 + 0.5);
+      const bubbleTargetY = spawn.y + Math.sin(angle) * distance;
+      
+      // 少し遅延させて生成
+      setTimeout(() => {
+        // 泡パーティクルを追加
+        const particleId = addParticle(spawn.x, spawn.y, bubbleTargetX, bubbleTargetY);
+        
+        // 泡が弾ける効果 (settings.options.trail が有効な場合)
+        if (settings.options.trail) {
+          // ランダムな時間で泡が弾ける
+          const popTime = settings.duration * 1000 * (0.3 + Math.random() * 0.4);
+          
+          setTimeout(() => {
+            // 現在のパーティクル位置を取得（存在する場合）
+            const particleElement = document.getElementById(`particle-${particleId}`);
+            if (particleElement) {
+              const rect = particleElement.getBoundingClientRect();
+              // 黄色い煙を作成
+              createYellowSmoke(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            }
+          }, popTime);
+        }
+      }, i * 50); // パーティクルごとに少し遅延
+    }
+  };
+
+  // 黄色い煙を作成（泡が弾けたときのエフェクト）
+  const createYellowSmoke = (x, y) => {
+    const smokeCount = 1 + Math.floor(Math.random() * 2); // 1〜2個の煙
+    
+    for (let i = 0; i < smokeCount; i++) {
+      // 上方向にランダムな角度で上昇
+      const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI/6;
+      const distance = 20 + Math.random() * 30;
+      
+      // 煙の目標位置
+      const smokeTargetX = x + Math.cos(angle) * distance;
+      const smokeTargetY = y + Math.sin(angle) * distance;
+      
+      // 煙を追加（特殊なIDを付与して黄色い煙と識別）
+      const smokeId = `yellow-smoke-${Date.now()}-${Math.random()}`;
+      const smokePack = {
+        id: smokeId,
+        x,
+        y,
+        targetX: smokeTargetX,
+        targetY: smokeTargetY,
+        size: 20 + Math.random() * 20,
+        opacity: 0.6,
+        isYellowSmoke: true // 特殊フラグを設定
+      };
+      
+      // 煙を追加
+      setParticles(prev => [...prev, smokePack]);
+      
+      // 短い時間で消える
+      setTimeout(() => {
+        setParticles(prev => prev.filter(p => p.id !== smokeId));
+      }, 800);
+    }
+  };
+
+  // 霧状エフェクト生成関数
+  const createCloudEffect = (spawn, targetX, targetY, particleCount, settings) => {
+    console.log(`スポーン地点 ${spawn.id} から霧状エフェクトを生成`);
+    
+    // 霧の層数（trail オプションが有効ならより多くの層）
+    const layerCount = settings.options.trail ? 5 : 3;
+    const particlesPerLayer = Math.ceil(particleCount / layerCount);
+    
+    // 各層ごとに処理
+    for (let layer = 0; layer < layerCount; layer++) {
+      const layerDelay = layer * 120; // 層ごとの遅延
+      
+      setTimeout(() => {
+        // 各層ごとにパーティクルを放射状に配置
+        for (let i = 0; i < particlesPerLayer; i++) {
+          // 円周上に均等に配置
+          const angle = (i / particlesPerLayer) * Math.PI * 2;
+          
+          // 層ごとにサイズを変える（内側の層ほど小さく）
+          const layerSizeFactor = 0.7 + (layer / layerCount * 0.6);
+          
+          // 距離も層ごとに変える（外側の層ほど遠く）
+          const distance = settings.size * (0.5 + layer * 0.5);
+          
+          // 目標位置の計算
+          const cloudTargetX = spawn.x + Math.cos(angle) * distance;
+          
+          // 上昇効果（gravityオプションが有効なら）
+          const riseEffect = settings.options.gravity ? -50 - layer * 20 : 0;
+          const cloudTargetY = spawn.y + Math.sin(angle) * distance + riseEffect;
+          
+          // 霧パーティクルを追加（特殊なIDを付与）
+          const cloudId = `cloud-${Date.now()}-${Math.random()}`;
+          const cloudParticle = {
+            id: cloudId,
+            x: spawn.x,
+            y: spawn.y, 
+            targetX: cloudTargetX,
+            targetY: cloudTargetY,
+            size: settings.size * layerSizeFactor * (0.7 + Math.random() * 0.6),
+            opacity: settings.options.fade ? 0.9 : 0.6, // fadeオプションで濃度調整
+            isCloud: true, // 特殊フラグを設定
+            blurAmount: settings.options.pulsate ? 10 : 5 // pulsateオプションでぼかし調整
+          };
+          
+          // 霧を追加
+          setParticles(prev => [...prev, cloudParticle]);
+          
+          // アニメーション終了後に削除
+          setTimeout(() => {
+            setParticles(prev => prev.filter(p => p.id !== cloudId));
+          }, settings.duration * 1000);
+        }
+      }, layerDelay);
+    }
+  };
+  
   // 煙パーティクルの追加
   const addParticle = useCallback((spawnX, spawnY, targetX, targetY) => {
     try {
@@ -425,6 +557,20 @@ function App() {
               // 全て同時に発射
               addParticle(spawn.x, spawn.y, targetX, targetY);
             }
+          });
+          break;
+          
+        case 'bubble':
+          // 泡エフェクト
+          spawnPoints.forEach(spawn => {
+            createBubbleEffect(spawn, x, y, particleCount, smokeSettings);
+          });
+          break;
+  
+        case 'cloud':
+          // 霧状エフェクト
+          spawnPoints.forEach(spawn => {
+            createCloudEffect(spawn, x, y, particleCount, smokeSettings);
           });
           break;
           
@@ -599,14 +745,19 @@ function App() {
             {particles.map(particle => (
               <div
                 key={particle.id}
+                id={`particle-${particle.id}`}
                 style={{
                   position: 'absolute',
                   width: `${particle.size}px`,
                   height: `${particle.size}px`,
-                  backgroundColor: colorSettings.mainColor,
+                  backgroundColor: particle.isYellowSmoke ? '#ffff00' : colorSettings.mainColor,
                   borderRadius: '50%',
-                  opacity: particle.opacity,
-                  filter: 'blur(5px)',
+                  opacity: particle.opacity || 0.7,
+                  filter: particle.isCloud 
+                    ? `blur(${particle.blurAmount || 5}px)` 
+                    : particle.isYellowSmoke 
+                      ? 'blur(8px)'
+                      : 'blur(5px)',
                   // 初期位置をスポーン地点に設定
                   left: `${particle.x}px`,
                   top: `${particle.y}px`,
@@ -616,29 +767,39 @@ function App() {
                 // 要素が表示されたら目標位置に移動するアニメーションを開始
                 ref={el => {
                   if (el) {
-                    // 少し遅延させてアニメーションを開始
                     setTimeout(() => {
-                      // 目標位置に向かって移動
+                      // 目標位置への移動（すべてのタイプに共通）
                       el.style.left = `${particle.targetX}px`;
                       el.style.top = `${particle.targetY}px`;
-                      // フェードアウトと拡大
-                      el.style.opacity = '0';
-                      el.style.width = `${particle.size * 1.5}px`;
-                      el.style.height = `${particle.size * 1.5}px`;
-                      el.style.filter = 'blur(8px)';
                       
-                      // ブレンドモードに応じて色を変更
-                      if (colorSettings.blendMode === 'gradient' || colorSettings.blendMode === 'pulse') {
-                        el.style.backgroundColor = colorSettings.subColor;
-                      } else if (colorSettings.blendMode === 'random') {
-                        // ランダムモードではメインとサブからランダムに選ぶ
-                        const colors = [colorSettings.mainColor, colorSettings.subColor];
-                        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                        el.style.backgroundColor = randomColor;
+                      // タイプごとの特殊な処理
+                      if (particle.isCloud) {
+                        // 霧状エフェクト
+                        el.style.transform = 'translate(-50%, -50%) scale(1.8)';
+                        el.style.opacity = '0';
+                      } else if (particle.isYellowSmoke) {
+                        // 黄色い煙エフェクト
+                        el.style.transform = 'translate(-50%, -50%) scale(2)';
+                        el.style.opacity = '0';
+                      } else {
+                        // 通常の煙エフェクト（既存の処理）
+                        el.style.opacity = '0';
+                        el.style.width = `${particle.size * 1.5}px`;
+                        el.style.height = `${particle.size * 1.5}px`;
+                        
+                        // ブレンドモードに応じた色の変更（既存の処理）
+                        if (colorSettings.blendMode === 'gradient' || colorSettings.blendMode === 'pulse') {
+                          el.style.backgroundColor = colorSettings.subColor;
+                        } else if (colorSettings.blendMode === 'random') {
+                          const colors = [colorSettings.mainColor, colorSettings.subColor];
+                          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                          el.style.backgroundColor = randomColor;
+                        }
                       }
                     }, 10);
                   }
                 }}
+                className={particle.isBubble ? 'bubble-particle' : ''}
               />
             ))}
           </MainContainer>
