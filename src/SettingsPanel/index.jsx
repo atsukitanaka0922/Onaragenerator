@@ -6,6 +6,7 @@ import EffectTypeSettings from './EffectTypeSettings';
 import SpawnPointSettings from './SpawnPointSettings';
 import BackgroundSettings from './BackgroundSettings';
 import SimpleSoundSettings from './SimpleSoundSettings';
+import AutoFartSettings from './AutoFartSettings';
 import ReadmeContent from './ReadmeContent';
 
 const Panel = styled.div`
@@ -79,6 +80,15 @@ function SettingsPanel({
   setSelectedSoundGenre,
   isRandomSoundInGenre,
   setIsRandomSoundInGenre,
+  // 自動おなら関連のプロパティを追加
+  isAutoFartEnabled,
+  toggleAutoFart,
+  autoFartInterval,
+  setAutoFartInterval,
+  autoFartRandomPosition,
+  setAutoFartRandomPosition,
+  autoFartSoundOption,
+  setAutoFartSoundOption,
   onClose
 }) {
   const [activeTab, setActiveTab] = useState('smoke');
@@ -130,6 +140,12 @@ function SettingsPanel({
           onClick={() => setActiveTab('spawn')}
         >
           スポーン
+        </Tab>
+        <Tab 
+          active={activeTab === 'auto'} 
+          onClick={() => setActiveTab('auto')}
+        >
+          自動
         </Tab>
       </TabsContainer>
       
@@ -186,6 +202,19 @@ function SettingsPanel({
             addSpawnPoint={addSpawnPoint}
             removeSpawnPoint={removeSpawnPoint}
             removeAllSpawnPoints={removeAllSpawnPoints}
+          />
+        )}
+        
+        {activeTab === 'auto' && (
+          <AutoFartSettings 
+            isAutoFartEnabled={isAutoFartEnabled}
+            toggleAutoFart={toggleAutoFart}
+            autoFartInterval={autoFartInterval}
+            setAutoFartInterval={setAutoFartInterval}
+            autoFartRandomPosition={autoFartRandomPosition}
+            setAutoFartRandomPosition={setAutoFartRandomPosition}
+            autoFartSoundOption={autoFartSoundOption}
+            setAutoFartSoundOption={setAutoFartSoundOption}
           />
         )}
       </TabContent>

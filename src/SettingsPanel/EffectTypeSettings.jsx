@@ -168,7 +168,7 @@ function EffectTypeSettings({ smokeSettings, setSmokeSettings }) {
           active={smokeSettings.effectType === 'bubble'}
           onClick={() => handleEffectTypeChange('bubble')}
         >
-          泡
+          泡エフェクト
         </EffectButton>
         <EffectButton 
           active={smokeSettings.effectType === 'cloud'}
