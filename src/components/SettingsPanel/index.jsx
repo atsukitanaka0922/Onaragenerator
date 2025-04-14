@@ -1,5 +1,3 @@
-// src/components/SettingsPanel/index.jsx を修正
-
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import SmokeParameterSettings from './SmokeParameterSettings';
@@ -7,8 +5,9 @@ import ColorSettings from './ColorSettings';
 import EffectTypeSettings from './EffectTypeSettings';
 import SpawnPointSettings from './SpawnPointSettings';
 import BackgroundSettings from './BackgroundSettings';
-import SimpleSoundSettings from './SimpleSoundSettings';
-import ReadmeContent from './ReadmeContent'; // 新しいREADMEコンポーネントを追加
+import AdvancedSoundSettings from './AdvancedSoundSettings';
+import AutoFartSettings from './AutoFartSettings';
+import ReadmeContent from './ReadmeContent';
 
 const Panel = styled.div`
   position: absolute;
@@ -81,6 +80,15 @@ function SettingsPanel({
   setSelectedSoundGenre,
   isRandomSoundInGenre,
   setIsRandomSoundInGenre,
+  updateSoundBurstCount,
+  isAutoFartEnabled,
+  toggleAutoFart,
+  autoFartInterval,
+  setAutoFartInterval,
+  autoFartRandomPosition,
+  setAutoFartRandomPosition,
+  autoFartSoundOption,
+  setAutoFartSoundOption,
   onClose
 }) {
   const [activeTab, setActiveTab] = useState('smoke');
@@ -133,6 +141,12 @@ function SettingsPanel({
         >
           スポーン
         </Tab>
+        <Tab 
+          active={activeTab === 'auto'} 
+          onClick={() => setActiveTab('auto')}
+        >
+          自動
+        </Tab>
       </TabsContainer>
       
       <TabContent>
@@ -169,7 +183,7 @@ function SettingsPanel({
         )}
         
         {activeTab === 'sound' && (
-          <SimpleSoundSettings 
+          <AdvancedSoundSettings 
             selectedSoundUrl={selectedSoundUrl}
             setSelectedSoundUrl={setSelectedSoundUrl}
             isSoundOn={isSoundOn}
@@ -179,6 +193,7 @@ function SettingsPanel({
             setSelectedSoundGenre={setSelectedSoundGenre}
             isRandomSoundInGenre={isRandomSoundInGenre}
             setIsRandomSoundInGenre={setIsRandomSoundInGenre}
+            updateSoundBurstCount={updateSoundBurstCount}
           />
         )}
         
@@ -188,6 +203,19 @@ function SettingsPanel({
             addSpawnPoint={addSpawnPoint}
             removeSpawnPoint={removeSpawnPoint}
             removeAllSpawnPoints={removeAllSpawnPoints}
+          />
+        )}
+        
+        {activeTab === 'auto' && (
+          <AutoFartSettings 
+            isAutoFartEnabled={isAutoFartEnabled}
+            toggleAutoFart={toggleAutoFart}
+            autoFartInterval={autoFartInterval}
+            setAutoFartInterval={setAutoFartInterval}
+            autoFartRandomPosition={autoFartRandomPosition}
+            setAutoFartRandomPosition={setAutoFartRandomPosition}
+            autoFartSoundOption={autoFartSoundOption}
+            setAutoFartSoundOption={setAutoFartSoundOption}
           />
         )}
       </TabContent>

@@ -1,3 +1,4 @@
+import React from 'react';
 import styled from 'styled-components';
 
 const SettingsGroup = styled.div`
@@ -56,6 +57,14 @@ function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
     setSmokeSettings({
       ...smokeSettings,
       duration
+    });
+  };
+  
+  const handleBurstIntervalChange = (e) => {
+    const burstInterval = parseInt(e.target.value);
+    setSmokeSettings({
+      ...smokeSettings,
+      burstInterval
     });
   };
   
@@ -118,6 +127,21 @@ function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
           step="0.5" 
           value={smokeSettings.duration} 
           onChange={handleDurationChange}
+        />
+      </SliderContainer>
+      
+      <SliderContainer>
+        <SliderLabel>
+          連続発射間隔
+          <SliderValue>{smokeSettings.burstInterval}ms</SliderValue>
+        </SliderLabel>
+        <Slider 
+          type="range" 
+          min="100" 
+          max="1000" 
+          step="50"
+          value={smokeSettings.burstInterval} 
+          onChange={handleBurstIntervalChange}
         />
       </SliderContainer>
     </SettingsGroup>
