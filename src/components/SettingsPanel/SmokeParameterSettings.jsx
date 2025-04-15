@@ -26,6 +26,17 @@ const Slider = styled.input`
   width: 100%;
 `;
 
+const SectionDivider = styled.div`
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 15px 0;
+`;
+
+const SectionTitle = styled.h5`
+  margin-bottom: 10px;
+  font-weight: 500;
+`;
+
 function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
   // スライダー値の変更ハンドラ
   const handleSizeChange = (e) => {
@@ -60,6 +71,7 @@ function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
     });
   };
   
+  // 連続発射間隔の変更ハンドラ
   const handleBurstIntervalChange = (e) => {
     const burstInterval = parseInt(e.target.value);
     setSmokeSettings({
@@ -68,10 +80,20 @@ function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
     });
   };
   
+  // 連続発射速度の変更ハンドラ
+  const handleBurstSpeedChange = (e) => {
+    const burstSpeed = parseFloat(e.target.value);
+    setSmokeSettings({
+      ...smokeSettings,
+      burstSpeed
+    });
+  };
+  
   return (
     <SettingsGroup>
       <h4>煙のパラメータ</h4>
       
+      <SectionTitle>基本設定</SectionTitle>
       <SliderContainer>
         <SliderLabel>
           サイズ
@@ -118,7 +140,7 @@ function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
       <SliderContainer>
         <SliderLabel>
           持続時間
-          <SliderValue>{smokeSettings.duration.toFixed(1)}</SliderValue>
+          <SliderValue>{smokeSettings.duration.toFixed(1)}秒</SliderValue>
         </SliderLabel>
         <Slider 
           type="range" 
@@ -130,6 +152,9 @@ function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
         />
       </SliderContainer>
       
+      <SectionDivider />
+      
+      <SectionTitle>連続発射設定</SectionTitle>
       <SliderContainer>
         <SliderLabel>
           連続発射間隔
@@ -140,9 +165,30 @@ function SmokeParameterSettings({ smokeSettings, setSmokeSettings }) {
           min="100" 
           max="1000" 
           step="50"
-          value={smokeSettings.burstInterval} 
+          value={smokeSettings.burstInterval || 400} 
           onChange={handleBurstIntervalChange}
         />
+        <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '3px' }}>
+          各発射の間隔（小さいほど速く連続発射）
+        </div>
+      </SliderContainer>
+      
+      <SliderContainer>
+        <SliderLabel>
+          連続発射速度
+          <SliderValue>×{(smokeSettings.burstSpeed || 1.0).toFixed(1)}</SliderValue>
+        </SliderLabel>
+        <Slider 
+          type="range" 
+          min="0.5" 
+          max="3.0" 
+          step="0.1"
+          value={smokeSettings.burstSpeed || 1.0} 
+          onChange={handleBurstSpeedChange}
+        />
+        <div style={{ fontSize: '0.8rem', opacity: 0.7, marginTop: '3px' }}>
+          各パーティクル生成の速度倍率（大きいほど早く展開）
+        </div>
       </SliderContainer>
     </SettingsGroup>
   );

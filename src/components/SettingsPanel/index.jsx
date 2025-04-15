@@ -69,6 +69,12 @@ function SettingsPanel({
   addSpawnPoint,
   removeSpawnPoint,
   removeAllSpawnPoints,
+  updateSpawnPointColor,
+  updateSpawnPointActive,
+  activateAllSpawnPoints,
+  deactivateAllSpawnPoints,
+  spawnMode,
+  setSpawnMode,
   backgroundImage,
   setBackgroundImage,
   isSoundOn,
@@ -203,6 +209,12 @@ function SettingsPanel({
             addSpawnPoint={addSpawnPoint}
             removeSpawnPoint={removeSpawnPoint}
             removeAllSpawnPoints={removeAllSpawnPoints}
+            updateSpawnPointColor={updateSpawnPointColor}
+            updateSpawnPointActive={updateSpawnPointActive}
+            activateAllSpawnPoints={activateAllSpawnPoints}
+            deactivateAllSpawnPoints={deactivateAllSpawnPoints}
+            spawnMode={spawnMode}
+            setSpawnMode={setSpawnMode}
           />
         )}
         

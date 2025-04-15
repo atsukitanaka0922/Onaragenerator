@@ -4,6 +4,8 @@ import './App.css';
 import MainContainer from './components/MainContainer';
 import ControlPanel from './components/ControlPanel';
 import SettingsPanel from './components/SettingsPanel';
+import SpawnPoint from './components/SpawnPoint';
+import SpawnIndicator from './components/SpawnIndicator';
 
 const AppContainer = styled.div`
   width: 100%;
@@ -93,6 +95,10 @@ function App() {
   const [spawnPoints, setSpawnPoints] = useState([]);
   const [nextSpawnId, setNextSpawnId] = useState(1);
   
+  // スポーン地点の動作モード設定
+  const [spawnMode, setSpawnMode] = useState('simultaneous'); // 'simultaneous', 'sequential', 'random', 'randomMix'
+  const [currentSequentialIndex, setCurrentSequentialIndex] = useState(0); // 順番モード用のインデックス
+  
   // 煙のエフェクト設定
   const [smokeSettings, setSmokeSettings] = useState({
     size: 50,
@@ -100,6 +106,8 @@ function App() {
     speed: 1.0,
     duration: 3.0,
     effectType: 'normal',
+    burstInterval: 400, // 連続発射の間隔（ミリ秒）
+    burstSpeed: 1.0,    // 連続発射の速度倍率
     options: {
       fade: true,
       gravity: false,
@@ -122,7 +130,6 @@ function App() {
   const [selectedSoundUrl, setSelectedSoundUrl] = useState('/sounds/small1.mp3');
   const [selectedSoundGenre, setSelectedSoundGenre] = useState('medium');
   const [isRandomSoundInGenre, setIsRandomSoundInGenre] = useState(false);
-
   // ジャンルごとに効果音を分類
   const soundGenres = [
     {
@@ -245,12 +252,15 @@ function App() {
       setSoundsByGenre(updatedSoundsByGenre);
     }
   };
+  
   // スポーン地点を追加
   const addSpawnPoint = (x, y) => {
     const newSpawnPoint = {
       id: nextSpawnId,
       x,
-      y
+      y,
+      color: colorSettings.mainColor, // デフォルトはメインカラー
+      active: true                    // アクティブ状態を追加
     };
     
     setSpawnPoints([...spawnPoints, newSpawnPoint]);
@@ -262,9 +272,55 @@ function App() {
   
   // スポーン地点の位置を更新
   const updateSpawnPointPosition = (id, x, y) => {
-    setSpawnPoints(spawnPoints.map(point => 
+    // 重要: スポーン地点が実際に存在するかを確認
+    const pointExists = spawnPoints.some(point => point.id === id);
+    if (!pointExists) {
+      console.error(`ID ${id} のスポーン地点が見つかりません`);
+      return;
+    }
+    
+    // 座標が有効な数値であることを確認
+    if (isNaN(x) || isNaN(y)) {
+      console.error(`無効な座標が指定されました: x=${x}, y=${y}`);
+      return;
+    }
+    
+    // 現在のスポーン地点の配列をコピーして新しい配列を作成
+    const updatedPoints = spawnPoints.map(point => 
       point.id === id ? { ...point, x, y } : point
+    );
+    
+    // 新しい配列で状態を更新
+    setSpawnPoints(updatedPoints);
+    console.log(`スポーン地点の位置を更新しました: ID=${id}, x=${x}, y=${y}`);
+  };
+  
+  // スポーン地点の色を更新
+  const updateSpawnPointColor = (id, color) => {
+    setSpawnPoints(spawnPoints.map(point => 
+      point.id === id ? { ...point, color } : point
     ));
+    console.log(`スポーン地点 ID=${id} の色を更新しました: ${color}`);
+  };
+  
+  // スポーン地点のアクティブ状態を更新
+  const updateSpawnPointActive = (id, active) => {
+    setSpawnPoints(spawnPoints.map(point => 
+      point.id === id ? { ...point, active } : point
+    ));
+    console.log(`スポーン地点 ID=${id} のアクティブ状態を更新しました: ${active}`);
+  };
+  
+  // すべてのスポーン地点をアクティブ化
+  const activateAllSpawnPoints = () => {
+    setSpawnPoints(spawnPoints.map(point => ({ ...point, active: true })));
+    console.log("すべてのスポーン地点をアクティブ化しました");
+  };
+  
+  // すべてのスポーン地点を非アクティブ化
+  const deactivateAllSpawnPoints = () => {
+    setSpawnPoints(spawnPoints.map(point => ({ ...point, active: false })));
+    console.log("すべてのスポーン地点を非アクティブ化しました");
   };
   
   // スポーン地点削除
@@ -278,15 +334,24 @@ function App() {
     setSpawnPoints([]);
     console.log("すべてのスポーン地点を削除しました");
   };
-  
   // スポーン地点をタップするための処理を追加
   const handleSpawnPointDrag = useCallback((id, x, y) => {
     console.log(`スポーン地点の移動: ID=${id}, x=${x}, y=${y}`);
-    updateSpawnPointPosition(id, x, y);
-  }, [updateSpawnPointPosition]); // 依存配列に updateSpawnPointPosition を追加
+    // 座標が有効な値かチェック
+    if (isNaN(x) || isNaN(y)) {
+      console.error('無効な座標が指定されました:', { id, x, y });
+      return;
+    }
+    
+    // 安全のため画面内に収める
+    const safeX = Math.max(0, Math.min(window.innerWidth, x));
+    const safeY = Math.max(0, Math.min(window.innerHeight, y));
+    
+    updateSpawnPointPosition(id, safeX, safeY);
+  }, [updateSpawnPointPosition]);
 
   // 煙パーティクルの追加
-  const addParticle = useCallback((spawnX, spawnY, targetX, targetY) => {
+  const addParticle = useCallback((spawnX, spawnY, targetX, targetY, customColor = null) => {
     try {
       const newId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
       
@@ -301,10 +366,12 @@ function App() {
         targetY,
         // 追加のプロパティ
         size: smokeSettings.size * (0.8 + Math.random() * 0.4),
-        opacity: 0.7
+        opacity: 0.7,
+        // カスタム色があれば使用、なければデフォルト色
+        color: customColor || colorSettings.mainColor
       };
       
-      console.log(`パーティクル追加: ID=${newId}, 開始=(${spawnX},${spawnY}), 目標=(${targetX},${targetY})`);
+      console.log(`パーティクル追加: ID=${newId}, 開始=(${spawnX},${spawnY}), 目標=(${targetX},${targetY}), 色=${newParticle.color}`);
       
       // パーティクルを追加
       setParticles(prev => [...prev, newParticle]);
@@ -319,11 +386,14 @@ function App() {
       console.error('パーティクル追加エラー:', error);
       return null;
     }
-  }, [smokeSettings.size, smokeSettings.duration]);
+  }, [smokeSettings.size, smokeSettings.duration, colorSettings.mainColor]);
   
-  // 黄色い煙を作成（泡が弾けたときのエフェクト）
-  const createYellowSmoke = (x, y) => {
+  // 黄色い煙を作成（泡が弾けたときのエフェクト）- カスタム色対応
+  const createYellowSmoke = (x, y, customColor = null) => {
     const smokeCount = 1 + Math.floor(Math.random() * 2); // 1〜2個の煙
+    
+    // 使用する色を決定（カスタム色があればそれを使用、なければ黄色）
+    const smokeColor = customColor || '#ffff00';
     
     for (let i = 0; i < smokeCount; i++) {
       // 上方向にランダムな角度で上昇
@@ -344,7 +414,8 @@ function App() {
         targetY: smokeTargetY,
         size: 20 + Math.random() * 20,
         opacity: 0.6,
-        isYellowSmoke: true // 特殊フラグを設定
+        isYellowSmoke: true, // 特殊フラグを設定
+        color: smokeColor // カスタム色を設定
       };
       
       // 煙を追加
@@ -358,7 +429,7 @@ function App() {
   };
   
   // 泡エフェクト生成関数
-  const createBubbleEffect = (spawn, targetX, targetY, particleCount, settings) => {
+  const createBubbleEffect = (spawn, targetX, targetY, particleCount, settings, customColor = null) => {
     console.log(`スポーン地点 ${spawn.id} から泡エフェクトを生成`);
     
     for (let i = 0; i < particleCount; i++) {
@@ -391,7 +462,8 @@ function App() {
           opacity: 0.7,
           isBubble: true, // 泡フラグ
           popTime: popTime,
-          duration: settings.duration
+          duration: settings.duration,
+          color: customColor // カスタム色を設定
         };
         
         // パーティクルリストに追加
@@ -404,8 +476,8 @@ function App() {
             const bubbleElement = document.getElementById(`particle-${bubbleId}`);
             if (bubbleElement) {
               const rect = bubbleElement.getBoundingClientRect();
-              // 黄色い煙を生成
-              createYellowSmoke(rect.left + rect.width / 2, rect.top + rect.height / 2);
+              // 黄色い煙を生成（カスタム色にも対応）
+              createYellowSmoke(rect.left + rect.width / 2, rect.top + rect.height / 2, customColor);
             }
             
             // 泡を消す
@@ -417,12 +489,11 @@ function App() {
             setParticles(prev => prev.filter(p => p.id !== bubbleId));
           }, settings.duration * 1000);
         }
-      }, i * 50); // パーティクルごとに少し遅延
+      }, i * (50 / (settings.burstSpeed || 1.0))); // パーティクルごとに少し遅延（burstSpeedを適用）
     }
   };
-  
   // 霧状エフェクト生成関数
-  const createCloudEffect = (spawn, targetX, targetY, particleCount, settings) => {
+  const createCloudEffect = (spawn, targetX, targetY, particleCount, settings, customColor = null) => {
     console.log(`スポーン地点 ${spawn.id} から霧状エフェクトを生成`);
     
     // 霧の層数（trail オプションが有効ならより多くの層）
@@ -431,7 +502,8 @@ function App() {
     
     // 各層ごとに処理
     for (let layer = 0; layer < layerCount; layer++) {
-      const layerDelay = layer * 120; // 層ごとの遅延
+      // 層ごとの遅延（burstSpeedを適用）
+      const layerDelay = layer * (120 / (settings.burstSpeed || 1.0));
       
       setTimeout(() => {
         // 各層ごとにパーティクルを放射状に配置
@@ -463,7 +535,8 @@ function App() {
             size: settings.size * layerSizeFactor * (0.7 + Math.random() * 0.6),
             opacity: settings.options.fade ? 0.9 : 0.6, // fadeオプションで濃度調整
             isCloud: true, // 特殊フラグを設定
-            blurAmount: settings.options.pulsate ? 10 : 5 // pulsateオプションでぼかし調整
+            blurAmount: settings.options.pulsate ? 10 : 5, // pulsateオプションでぼかし調整
+            color: customColor // カスタム色を設定
           };
           
           // 霧を追加
@@ -486,7 +559,97 @@ function App() {
     const randomIndex = Math.floor(Math.random() * sounds.length);
     return sounds[randomIndex].url;
   }, [soundsByGenre]);
-  // 煙のバースト生成 - エフェクトタイプに対応 - 発射回数対応版
+
+  // オートおなら機能のトグル関数
+  const toggleAutoFart = useCallback(() => {
+    if (!isAutoFartEnabled) {
+      // オートおなら開始
+      startAutoFart();
+    } else {
+      // オートおなら停止
+      stopAutoFart();
+    }
+  }, [isAutoFartEnabled]);
+  
+  // オートおなら開始関数
+  const startAutoFart = useCallback(() => {
+    if (autoFartIntervalRef.current) {
+      clearInterval(autoFartIntervalRef.current);
+    }
+
+    // インターバルをセット
+    autoFartIntervalRef.current = setInterval(() => {
+      // スポーン地点がなければ何もしない
+      if (spawnPoints.length === 0) return;
+
+      // おならの発生位置を決定
+      let targetX, targetY;
+      
+      if (autoFartRandomPosition) {
+        // ランダムな位置
+        targetX = Math.random() * window.innerWidth;
+        targetY = Math.random() * window.innerHeight;
+      } else {
+        // 画面中央
+        targetX = window.innerWidth / 2;
+        targetY = window.innerHeight / 2;
+      }
+
+      // 効果音設定の適用 - ディープコピーで現在の値を保存
+      const originalState = {
+        soundUrl: selectedSoundUrl,
+        soundGenre: selectedSoundGenre,
+        randomInGenre: isRandomSoundInGenre
+      };
+      
+      // 自動おならのサウンドオプションに基づいて一時的に設定を変更
+      if (autoFartSoundOption === 'random') {
+        // 現在のジャンルからランダム選択を有効にする
+        setIsRandomSoundInGenre(true);
+      } else if (autoFartSoundOption === 'randomAll') {
+        // 全ジャンルからランダム
+        const allGenres = Object.keys(soundsByGenre);
+        if (allGenres.length > 0) {
+          // 実際にランダムなジャンルを選択
+          const randomGenre = allGenres[Math.floor(Math.random() * allGenres.length)];
+          console.log(`自動おなら: ランダムジャンル「${randomGenre}」を選択`);
+          
+          // ジャンルを変更
+          setSelectedSoundGenre(randomGenre);
+          
+          // ランダム再生を有効化
+          setIsRandomSoundInGenre(true);
+        }
+      }
+
+      // 少し遅延させてからおならを発生させる（状態更新が反映されるのを待つ）
+      setTimeout(() => {
+        // おならを発生させる（既存のスポーンモード機能を利用）
+        createSmokeBurst(targetX, targetY);
+        
+        // 効果音設定を元に戻す（少し遅延させる）
+        setTimeout(() => {
+          setSelectedSoundUrl(originalState.soundUrl);
+          setSelectedSoundGenre(originalState.soundGenre);
+          setIsRandomSoundInGenre(originalState.randomInGenre);
+        }, 500);
+      }, 50);
+      
+    }, autoFartInterval * 1000);
+    
+    // 状態を更新
+    setIsAutoFartEnabled(true);
+  }, [autoFartInterval, autoFartRandomPosition, autoFartSoundOption, spawnPoints, selectedSoundUrl, selectedSoundGenre, isRandomSoundInGenre, soundsByGenre, setSelectedSoundUrl, setSelectedSoundGenre, setIsRandomSoundInGenre]);
+
+  // オートおなら停止関数
+  const stopAutoFart = useCallback(() => {
+    if (autoFartIntervalRef.current) {
+      clearInterval(autoFartIntervalRef.current);
+      autoFartIntervalRef.current = null;
+    }
+    setIsAutoFartEnabled(false);
+  }, []);
+  // 煙のバースト生成 - 発射回数対応版 - スポーンモード対応版
   const createSmokeBurst = useCallback((x, y) => {
     // 既に実行中なら処理しない
     if (isCreatingSmoke) {
@@ -494,19 +657,74 @@ function App() {
       return;
     }
     
-    console.log(`煙バースト生成: 目標位置 x=${x}, y=${y}, エフェクトタイプ: ${smokeSettings.effectType}`);
+    console.log(`煙バースト生成: 目標位置 x=${x}, y=${y}, エフェクトタイプ: ${smokeSettings.effectType}, スポーンモード: ${spawnMode}`);
     
     // 処理中フラグを立てる
     setIsCreatingSmoke(true);
     
     try {
+      // 有効なスポーン地点をフィルタリング
+      const activeSpawnPoints = spawnPoints.filter(point => point.active !== false);
+      
       // スポーン地点がない場合は緊急追加
-      if (spawnPoints.length === 0) {
+      if (activeSpawnPoints.length === 0) {
         const id = addSpawnPoint(window.innerWidth / 2, window.innerHeight - 100);
         console.log(`緊急スポーン地点が追加されました: ID=${id}`);
         setIsCreatingSmoke(false);
         return;
       }
+      
+      // スポーンモードに基づいて使用するスポーン地点を選択
+      let spawnPointsToUse = [];
+      
+      switch (spawnMode) {
+        case 'simultaneous':
+          // 全てのアクティブなスポーン地点を使用
+          spawnPointsToUse = activeSpawnPoints;
+          break;
+          
+        case 'sequential':
+          // 順番にスポーン地点を使用
+          if (activeSpawnPoints.length > 0) {
+            // 現在のインデックスが範囲外ならリセット
+            if (currentSequentialIndex >= activeSpawnPoints.length) {
+              setCurrentSequentialIndex(0);
+            }
+            
+            spawnPointsToUse = [activeSpawnPoints[currentSequentialIndex]];
+            
+            // 次のインデックスに更新
+            setCurrentSequentialIndex((currentSequentialIndex + 1) % activeSpawnPoints.length);
+          }
+          break;
+          
+        case 'random':
+          // ランダムに1つのスポーン地点を選択
+          if (activeSpawnPoints.length > 0) {
+            const randomIndex = Math.floor(Math.random() * activeSpawnPoints.length);
+            spawnPointsToUse = [activeSpawnPoints[randomIndex]];
+          }
+          break;
+          
+        case 'randomMix':
+          // ランダムに1～全部のスポーン地点を選択
+          if (activeSpawnPoints.length > 0) {
+            // 各スポーン地点を50%の確率で選択
+            spawnPointsToUse = activeSpawnPoints.filter(() => Math.random() > 0.5);
+            
+            // 何も選ばれなかった場合は1つだけランダムに選択
+            if (spawnPointsToUse.length === 0) {
+              const randomIndex = Math.floor(Math.random() * activeSpawnPoints.length);
+              spawnPointsToUse = [activeSpawnPoints[randomIndex]];
+            }
+          }
+          break;
+          
+        default:
+          spawnPointsToUse = activeSpawnPoints;
+      }
+      
+      console.log(`使用するスポーン地点: ${spawnPointsToUse.length}箇所`);
       
       // 発射回数を決定
       let burstCount = 1; // デフォルトは1回
@@ -554,15 +772,22 @@ function App() {
       
       // 発射回数分ループして煙を生成
       for (let burstIndex = 0; burstIndex < burstCount; burstIndex++) {
-        // 各発射に少し遅延を加える
+        // 各発射に少し遅延を加える（burstIntervalを使用）
         setTimeout(() => {
           const particleCount = Math.min(smokeSettings.count, 15); // 上限15個
           
-          // エフェクトタイプに基づいて処理
-          switch (smokeSettings.effectType) {
-            case 'explosion':
-              // 爆発エフェクト
-              spawnPoints.forEach(spawn => {
+          // 連続発射の速度倍率を適用するための値を計算
+          const burstSpeed = smokeSettings.burstSpeed || 1.0;
+          
+          // 選択されたスポーン地点ごとの処理
+          spawnPointsToUse.forEach(spawn => {
+            // スポーン地点の色を取得（設定されていなければメインカラー）
+            const spawnColor = spawn.color || colorSettings.mainColor;
+            
+            // エフェクトタイプに基づいて処理
+            switch (smokeSettings.effectType) {
+              case 'explosion':
+                // 爆発エフェクト
                 console.log(`スポーン地点 ${spawn.id} から爆発エフェクトを生成`);
                 for (let i = 0; i < particleCount; i++) {
                   // 360度全方向にランダムな角度で発射
@@ -573,15 +798,13 @@ function App() {
                   const targetY = spawn.y + Math.sin(angle) * distance;
                   
                   setTimeout(() => {
-                    addParticle(spawn.x, spawn.y, targetX, targetY);
-                  }, i * 30);
+                    addParticle(spawn.x, spawn.y, targetX, targetY, spawnColor);
+                  }, i * (30 / burstSpeed)); // burstSpeedで遅延時間を調整
                 }
-              });
-              break;
-              
-            case 'spiral':
-              // 螺旋エフェクト
-              spawnPoints.forEach(spawn => {
+                break;
+                
+              case 'spiral':
+                // 螺旋エフェクト
                 console.log(`スポーン地点 ${spawn.id} から螺旋エフェクトを生成`);
                 
                 // 基本的な方向を計算
@@ -596,15 +819,13 @@ function App() {
                   const targetY = spawn.y + Math.sin(spiralAngle) * distance;
                   
                   setTimeout(() => {
-                    addParticle(spawn.x, spawn.y, targetX, targetY);
-                  }, i * 80);
+                    addParticle(spawn.x, spawn.y, targetX, targetY, spawnColor);
+                  }, i * (80 / burstSpeed)); // burstSpeedで遅延時間を調整
                 }
-              });
-              break;
-              
-            case 'fountain':
-              // 噴水エフェクト
-              spawnPoints.forEach(spawn => {
+                break;
+                
+              case 'fountain':
+                // 噴水エフェクト
                 console.log(`スポーン地点 ${spawn.id} から噴水エフェクトを生成`);
                 for (let i = 0; i < particleCount; i++) {
                   // 上方向を中心にしたランダムな角度（-45度〜+45度）
@@ -615,15 +836,13 @@ function App() {
                   const targetY = spawn.y + Math.sin(angle) * distance;
                   
                   setTimeout(() => {
-                    addParticle(spawn.x, spawn.y, targetX, targetY);
-                  }, i * 60);
+                    addParticle(spawn.x, spawn.y, targetX, targetY, spawnColor);
+                  }, i * (60 / burstSpeed)); // burstSpeedで遅延時間を調整
                 }
-              });
-              break;
-              
-            case 'ring':
-              // リングエフェクト
-              spawnPoints.forEach(spawn => {
+                break;
+                
+              case 'ring':
+                // リングエフェクト
                 console.log(`スポーン地点 ${spawn.id} からリングエフェクトを生成`);
                 for (let i = 0; i < particleCount; i++) {
                   // 円周上に均等に配置
@@ -634,30 +853,24 @@ function App() {
                   const targetY = spawn.y + Math.sin(angle) * distance;
                   
                   // 全て同時に発射
-                  addParticle(spawn.x, spawn.y, targetX, targetY);
+                  addParticle(spawn.x, spawn.y, targetX, targetY, spawnColor);
                 }
-              });
-              break;
+                break;
+                
+              case 'bubble':
+                // 泡エフェクト - スポーン地点からのみ上昇するように修正
+                // カスタム色を設定して泡エフェクトを生成
+                createBubbleEffect(spawn, spawn.x, spawn.y - 200, particleCount, smokeSettings, spawnColor);
+                break;
               
-            case 'bubble':
-              // 泡エフェクト - スポーン地点からのみ上昇するように修正
-              spawnPoints.forEach(spawn => {
-                // タップした位置は無視して、スポーン地点から直接上昇させる
-                createBubbleEffect(spawn, spawn.x, spawn.y - 200, particleCount, smokeSettings);
-              });
-              break;
-            
-            case 'cloud':
-              // 霧状エフェクト
-              spawnPoints.forEach(spawn => {
-                createCloudEffect(spawn, x, y, particleCount, smokeSettings);
-              });
-              break;
-              
-            case 'normal':
-            default:
-              // 通常エフェクト
-              spawnPoints.forEach(spawn => {
+              case 'cloud':
+                // 霧状エフェクト - カスタム色を設定
+                createCloudEffect(spawn, x, y, particleCount, smokeSettings, spawnColor);
+                break;
+                
+              case 'normal':
+              default:
+                // 通常エフェクト
                 console.log(`スポーン地点 ${spawn.id} から通常エフェクトを生成: (${spawn.x}, ${spawn.y}) → 目標: (${x}, ${y})`);
                 
                 for (let i = 0; i < particleCount; i++) {
@@ -665,16 +878,16 @@ function App() {
                   const offsetX = x + (Math.random() * 60 - 30);
                   const offsetY = y + (Math.random() * 60 - 30);
                   
-                  // 少し遅延させて生成
+                  // 少し遅延させて生成（連続発射速度を適用）
                   setTimeout(() => {
                     // スポーン地点から発生し、タップした位置の周辺を目標とする
-                    addParticle(spawn.x, spawn.y, offsetX, offsetY);
-                  }, i * 20);
+                    addParticle(spawn.x, spawn.y, offsetX, offsetY, spawnColor);
+                  }, i * (20 / burstSpeed)); // burstSpeedで遅延時間を調整
                 }
-              });
-              break;
-          }
-        }, burstIndex * 400); // 各発射間の遅延 (適宜調整)
+                break;
+            }
+          });
+        }, burstIndex * (smokeSettings.burstInterval || 400)); // 設定された発射間隔を使用
       }
     } catch (error) {
       console.error('煙生成エラー:', error);
@@ -685,107 +898,12 @@ function App() {
         setIsCreatingSmoke(false);
       }, 300);
     }
-  }, [isCreatingSmoke, spawnPoints, isSoundOn, selectedSoundUrl, isRandomSoundInGenre, selectedSoundGenre, soundsByGenre, smokeSettings, addParticle, addSpawnPoint, createBubbleEffect, createCloudEffect]);
+  }, [isCreatingSmoke, spawnPoints, isSoundOn, selectedSoundUrl, isRandomSoundInGenre, selectedSoundGenre, soundsByGenre, smokeSettings, colorSettings, spawnMode, currentSequentialIndex, addParticle, addSpawnPoint, createBubbleEffect, createCloudEffect]);
 
   // メイン画面のクリックイベント処理関数
   const handleInteraction = useCallback((x, y) => {
     createSmokeBurst(x, y);
   }, [createSmokeBurst]);
-  
-  // オートおなら機能のトグル関数
-  const toggleAutoFart = useCallback(() => {
-    if (!isAutoFartEnabled) {
-      // オートおなら開始
-      startAutoFart();
-    } else {
-      // オートおなら停止
-      stopAutoFart();
-    }
-  }, [isAutoFartEnabled]);
-  
-  // オートおなら開始関数
-  const startAutoFart = useCallback(() => {
-    if (autoFartIntervalRef.current) {
-      clearInterval(autoFartIntervalRef.current);
-    }
-
-    // インターバルをセット
-    autoFartIntervalRef.current = setInterval(() => {
-      // スポーン地点がなければ何もしない
-      if (spawnPoints.length === 0) return;
-
-      // おならの発生位置を決定
-      let targetX, targetY;
-      
-      if (autoFartRandomPosition) {
-        // ランダムな位置
-        targetX = Math.random() * window.innerWidth;
-        targetY = Math.random() * window.innerHeight;
-      } else {
-        // 画面中央
-        targetX = window.innerWidth / 2;
-        targetY = window.innerHeight / 2;
-      }
-
-      // 効果音設定の適用
-      const originalSoundUrl = selectedSoundUrl;
-      const originalSoundGenre = selectedSoundGenre;
-      const originalRandomInGenre = isRandomSoundInGenre;
-      
-      let tempSoundFunction = null;
-      
-      // 一時的に効果音設定を変更
-      if (autoFartSoundOption === 'random' && !isRandomSoundInGenre) {
-        // 同じジャンルからランダム
-        tempSoundFunction = () => {
-          setIsRandomSoundInGenre(true);
-          return () => setIsRandomSoundInGenre(originalRandomInGenre);
-        };
-      } else if (autoFartSoundOption === 'randomAll') {
-        // 全ジャンルからランダム
-        tempSoundFunction = () => {
-          // ランダムなジャンル
-          const allGenres = Object.keys(soundsByGenre);
-          const randomGenre = allGenres[Math.floor(Math.random() * allGenres.length)];
-          setSelectedSoundGenre(randomGenre);
-          setIsRandomSoundInGenre(true);
-          
-          // 効果音設定を元に戻す関数を返す
-          return () => {
-            setSelectedSoundGenre(originalSoundGenre);
-            setIsRandomSoundInGenre(originalRandomInGenre);
-          };
-        };
-      }
-      
-      // 一時的な効果音設定を適用
-      let restoreFunction = null;
-      if (tempSoundFunction) {
-        restoreFunction = tempSoundFunction();
-      }
-
-      // おならを発生させる
-      createSmokeBurst(targetX, targetY);
-      
-      // 効果音設定を元に戻す
-      if (restoreFunction) {
-        setTimeout(restoreFunction, 100);
-      }
-    }, autoFartInterval * 1000);
-    
-    // 状態を更新
-    setIsAutoFartEnabled(true);
-  }, [autoFartInterval, autoFartRandomPosition, autoFartSoundOption, spawnPoints, createSmokeBurst, selectedSoundUrl, selectedSoundGenre, isRandomSoundInGenre, soundsByGenre]);
-
-  // オートおなら停止関数
-  const stopAutoFart = useCallback(() => {
-    if (autoFartIntervalRef.current) {
-      clearInterval(autoFartIntervalRef.current);
-      autoFartIntervalRef.current = null;
-    }
-    setIsAutoFartEnabled(false);
-  }, []);
-  
   // アプリケーション開始
   const startApp = () => {
     setIsStarted(true);
@@ -808,6 +926,7 @@ function App() {
       }
     };
   }, []);
+  
   // エラー発生時の表示
   if (hasError) {
     return (
@@ -840,7 +959,6 @@ function App() {
       </div>
     );
   }
-
   return (
     <AppContainer>
       {!isStarted ? (
@@ -857,86 +975,19 @@ function App() {
             onInteraction={handleInteraction}
             isSettingSpawn={isSettingSpawn}
           >
-            {/* スポーン地点 - ドラッグ機能とタッチサポートを追加 */}
+            {/* スポーン地点 - SpawnPointコンポーネントを使用 */}
             {spawnPoints.map(point => (
-              <div 
+              <SpawnPoint
                 key={point.id}
-                style={{
-                  position: 'absolute',
-                  width: '30px',
-                  height: '30px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                  border: '2px dashed #FF5722',
-                  borderRadius: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  display: isSettingSpawn ? 'flex' : 'none',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  left: `${point.x}px`,
-                  top: `${point.y}px`,
-                  zIndex: 10,
-                  cursor: isSettingSpawn ? 'move' : 'default',
-                  touchAction: 'none' /* タッチ操作時のブラウザのデフォルト動作を無効化 */
-                }}
-                onMouseDown={isSettingSpawn ? (e) => {
-                  // ドラッグ開始
-                  e.preventDefault(); // 先頭に追加
-                  e.stopPropagation();
-                  
-                  const startX = e.clientX;
-                  const startY = e.clientY;
-                  const startPointX = point.x;
-                  const startPointY = point.y;
-                  
-                  const handleMouseMove = (moveEvent) => {
-                    const dx = moveEvent.clientX - startX;
-                    const dy = moveEvent.clientY - startY;
-                    handleSpawnPointDrag(point.id, startPointX + dx, startPointY + dy);
-                  };
-                  
-                  const handleMouseUp = () => {
-                    document.removeEventListener('mousemove', handleMouseMove);
-                    document.removeEventListener('mouseup', handleMouseUp);
-                  };
-                  
-                  document.addEventListener('mousemove', handleMouseMove);
-                  document.addEventListener('mouseup', handleMouseUp);
-                } : undefined}
-                onTouchStart={isSettingSpawn ? (e) => {
-                  // タッチドラッグ開始
-                  e.preventDefault(); // 先頭に追加
-                  e.stopPropagation();
-                  
-                  if (e.touches.length !== 1) return; // シングルタッチのみ処理
-                  
-                  const touch = e.touches[0];
-                  const startX = touch.clientX;
-                  const startY = touch.clientY;
-                  const startPointX = point.x;
-                  const startPointY = point.y;
-                  
-                  const handleTouchMove = (moveEvent) => {
-                    // スクロールを防止
-                    moveEvent.preventDefault();
-                    
-                    if (moveEvent.touches.length !== 1) return;
-                    const moveTouch = moveEvent.touches[0];
-                    const dx = moveTouch.clientX - startX;
-                    const dy = moveTouch.clientY - startY;
-                    handleSpawnPointDrag(point.id, startPointX + dx, startPointY + dy);
-                  };
-                  
-                  const handleTouchEnd = () => {
-                    document.removeEventListener('touchmove', handleTouchMove);
-                    document.removeEventListener('touchend', handleTouchEnd);
-                  };
-                  
-                  document.addEventListener('touchmove', handleTouchMove, { passive: false });
-                  document.addEventListener('touchend', handleTouchEnd);
-                } : undefined}
-              >
-                {point.id}
-              </div>
+                id={point.id}
+                x={point.x}
+                y={point.y}
+                color={point.color || '#FF5722'}
+                isActive={point.active !== false}
+                isVisible={isSettingSpawn}
+                isDraggable={isSettingSpawn}
+                onPositionChange={handleSpawnPointDrag}
+              />
             ))}
             
             {/* 煙パーティクル */}
@@ -952,11 +1003,11 @@ function App() {
                   ...(particle.isBubble ? {
                     backgroundColor: 'transparent',
                     borderRadius: '50%',
-                    boxShadow: '0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3)',
-                    background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4))',
+                    boxShadow: `0 0 10px rgba(255, 255, 255, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3)`,
+                    background: `radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4))`,
                     opacity: particle.opacity || 0.7,
                   } : {
-                    backgroundColor: particle.isYellowSmoke ? '#ffff00' : colorSettings.mainColor,
+                    backgroundColor: particle.isYellowSmoke ? (particle.color || '#ffff00') : (particle.color || colorSettings.mainColor),
                     borderRadius: '50%',
                     opacity: particle.opacity || 0.7,
                     filter: particle.isCloud 
@@ -1032,6 +1083,12 @@ function App() {
             toggleAutoFart={toggleAutoFart}
           />
           
+          {/* スポーン地点操作中のインジケーター */}
+          <SpawnIndicator 
+            isVisible={isSettingSpawn}
+            spawnPoints={spawnPoints}
+          />
+          
           {isSettingsPanelOpen && (
             <SettingsPanel 
               smokeSettings={smokeSettings}
@@ -1042,6 +1099,12 @@ function App() {
               addSpawnPoint={addSpawnPoint}
               removeSpawnPoint={removeSpawnPoint}
               removeAllSpawnPoints={removeAllSpawnPoints}
+              updateSpawnPointColor={updateSpawnPointColor}
+              updateSpawnPointActive={updateSpawnPointActive}
+              activateAllSpawnPoints={activateAllSpawnPoints}
+              deactivateAllSpawnPoints={deactivateAllSpawnPoints}
+              spawnMode={spawnMode}
+              setSpawnMode={setSpawnMode}
               backgroundImage={backgroundImage}
               setBackgroundImage={setBackgroundImage}
               isSoundOn={isSoundOn}

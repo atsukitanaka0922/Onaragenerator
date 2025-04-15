@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 
 const Point = styled.div`
@@ -6,7 +6,7 @@ const Point = styled.div`
   width: 30px;
   height: 30px;
   background-color: rgba(255, 255, 255, 0.7);
-  border: 2px dashed #FF5722;
+  border: 2px dashed ${props => props.color || '#FF5722'};
   border-radius: 50%;
   transform: translate(-50%, -50%);
   display: flex;
@@ -14,15 +14,19 @@ const Point = styled.div`
   align-items: center;
   font-size: 12px;
   color: #000;
-  cursor: move;
+  cursor: ${props => props.isDraggable ? 'move' : 'default'};
   z-index: 10;
   user-select: none;
+  opacity: ${props => props.isActive ? 1 : 0.4};
+  touch-action: none;
 `;
 
 function SpawnPoint({ 
   id, 
   x, 
   y, 
+  color = '#FF5722',
+  isActive = true,
   isVisible, 
   isDraggable, 
   onPositionChange 
@@ -41,6 +45,7 @@ function SpawnPoint({
   const handleMouseDown = (e) => {
     if (!isDraggable) return;
     
+    // ドラッグ中フラグを立てる
     isDragging.current = true;
     
     // クリック位置とスポーン地点の位置の差分を計算
@@ -50,6 +55,7 @@ function SpawnPoint({
       y: e.clientY - pointRect.top - pointRect.height / 2
     };
     
+    // イベントのデフォルト動作を防止
     e.preventDefault();
     e.stopPropagation();
   };
@@ -58,6 +64,7 @@ function SpawnPoint({
   const handleTouchStart = (e) => {
     if (!isDraggable) return;
     
+    // ドラッグ中フラグを立てる
     isDragging.current = true;
     
     // タッチ位置とスポーン地点の位置の差分を計算
@@ -69,20 +76,24 @@ function SpawnPoint({
       y: touch.clientY - pointRect.top - pointRect.height / 2
     };
     
+    // イベントのデフォルト動作を防止
     e.preventDefault();
     e.stopPropagation();
   };
 
-  // グローバルのマウス移動イベントをリッスン
+  // グローバルのマウス/タッチ移動イベントをリッスン
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging.current) return;
       
+      // 移動距離を計算
       const newX = e.clientX - offset.current.x;
       const newY = e.clientY - offset.current.y;
       
+      // 内部状態を更新（表示位置）
       setPosition({ x: newX, y: newY });
       
+      // 親コンポーネントに通知
       if (onPositionChange) {
         onPositionChange(id, newX, newY);
       }
@@ -91,22 +102,30 @@ function SpawnPoint({
     const handleTouchMove = (e) => {
       if (!isDragging.current) return;
       
+      // 移動距離を計算
       const touch = e.touches[0];
       const newX = touch.clientX - offset.current.x;
       const newY = touch.clientY - offset.current.y;
       
+      // 内部状態を更新（表示位置）
       setPosition({ x: newX, y: newY });
       
+      // 親コンポーネントに通知
       if (onPositionChange) {
         onPositionChange(id, newX, newY);
       }
+      
+      // スクロールを防止
+      e.preventDefault();
     };
     
     const handleMouseUp = () => {
+      // ドラッグ終了
       isDragging.current = false;
     };
     
     const handleTouchEnd = () => {
+      // ドラッグ終了
       isDragging.current = false;
     };
     
@@ -133,6 +152,9 @@ function SpawnPoint({
         top: `${position.y}px`,
         display: isVisible ? 'flex' : 'none'
       }}
+      color={color}
+      isActive={isActive}
+      isDraggable={isDraggable}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
