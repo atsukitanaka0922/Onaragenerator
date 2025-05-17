@@ -6,6 +6,7 @@ import ControlPanel from './components/ControlPanel';
 import SettingsPanel from './components/SettingsPanel';
 import SpawnPoint from './components/SpawnPoint';
 import SpawnIndicator from './components/SpawnIndicator';
+import { vibrate, getFartVibrationPattern, isVibrationSupported } from './utils/vibrationUtils';
 
 const AppContainer = styled.div`
   width: 100%;
@@ -90,6 +91,14 @@ function App() {
   const [isSettingSpawn, setIsSettingSpawn] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState('');
   const [isCreatingSmoke, setIsCreatingSmoke] = useState(false);
+  
+  // 表示設定（v1.3.0で追加）
+  const [displaySettings, setDisplaySettings] = useState({
+    showSmoke: true,    // 煙を表示するかどうか
+    playSound: true,    // 音を鳴らすかどうか
+    vibration: true     // 振動させるかどうか
+  });
+  const [vibrationStrength, setVibrationStrength] = useState('medium'); // 振動の強さ: 'short', 'medium', 'long', 'explosive', 'subtle', 'random'
   
   // スポーン地点（先に宣言）
   const [spawnPoints, setSpawnPoints] = useState([]);
@@ -334,6 +343,7 @@ function App() {
     setSpawnPoints([]);
     console.log("すべてのスポーン地点を削除しました");
   };
+
   // スポーン地点をタップするための処理を追加
   const handleSpawnPointDrag = useCallback((id, x, y) => {
     console.log(`スポーン地点の移動: ID=${id}, x=${x}, y=${y}`);
@@ -492,6 +502,7 @@ function App() {
       }, i * (50 / (settings.burstSpeed || 1.0))); // パーティクルごとに少し遅延（burstSpeedを適用）
     }
   };
+
   // 霧状エフェクト生成関数
   const createCloudEffect = (spawn, targetX, targetY, particleCount, settings, customColor = null) => {
     console.log(`スポーン地点 ${spawn.id} から霧状エフェクトを生成`);
@@ -649,7 +660,8 @@ function App() {
     }
     setIsAutoFartEnabled(false);
   }, []);
-  // 煙のバースト生成 - 発射回数対応版 - スポーンモード対応版
+
+  // 煙のバースト生成 - 表示設定対応バージョン
   const createSmokeBurst = useCallback((x, y) => {
     // 既に実行中なら処理しない
     if (isCreatingSmoke) {
@@ -657,12 +669,55 @@ function App() {
       return;
     }
     
-    console.log(`煙バースト生成: 目標位置 x=${x}, y=${y}, エフェクトタイプ: ${smokeSettings.effectType}, スポーンモード: ${spawnMode}`);
+    console.log(`おなら発生: 目標位置 x=${x}, y=${y}, 設定:`, displaySettings);
     
     // 処理中フラグを立てる
     setIsCreatingSmoke(true);
     
     try {
+      // 振動機能の処理
+      if (displaySettings.vibration && isVibrationSupported()) {
+        const pattern = getFartVibrationPattern(vibrationStrength);
+        vibrate(pattern);
+        console.log(`振動パターン: ${pattern}`);
+      }
+      
+      // 効果音再生
+      if (displaySettings.playSound && isSoundOn) {
+        try {
+          // ジャンル内でランダム再生がオンの場合
+          let soundUrl;
+          if (isRandomSoundInGenre) {
+            // ランダムな効果音を選択
+            const sounds = soundsByGenre[selectedSoundGenre] || [];
+            if (sounds.length > 0) {
+              const randomIndex = Math.floor(Math.random() * sounds.length);
+              soundUrl = sounds[randomIndex].url;
+            }
+          } else {
+            soundUrl = selectedSoundUrl;
+          }
+          
+          if (soundUrl) {
+            const audio = new Audio(soundUrl);
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log('効果音再生エラー:', e));
+          }
+        } catch (e) {
+          console.log('効果音の処理中にエラー:', e);
+        }
+      }
+      
+      // 煙表示がオフの場合は、ここで処理を終了
+      if (!displaySettings.showSmoke) {
+        // 処理フラグをリセット
+        setTimeout(() => {
+          setIsCreatingSmoke(false);
+        }, 300);
+        return;
+      }
+
+      // 以下、煙表示ありの場合の処理
       // 有効なスポーン地点をフィルタリング
       const activeSpawnPoints = spawnPoints.filter(point => point.active !== false);
       
@@ -728,48 +783,36 @@ function App() {
       
       // 発射回数を決定
       let burstCount = 1; // デフォルトは1回
-      let selectedSound = null;
       
-      // 効果音を再生
-      if (isSoundOn) {
-        try {
-          // ジャンル内でランダム再生がオンの場合
-          let soundUrl;
+      try {
+        if (isSoundOn && displaySettings.playSound) {
           if (isRandomSoundInGenre) {
             // ランダムな効果音を選択
             const sounds = soundsByGenre[selectedSoundGenre] || [];
             if (sounds.length > 0) {
               const randomIndex = Math.floor(Math.random() * sounds.length);
-              selectedSound = sounds[randomIndex];
-              soundUrl = selectedSound.url;
+              const selectedSound = sounds[randomIndex];
               
               // 発射回数を更新
               burstCount = selectedSound.burstCount;
             }
           } else {
-            soundUrl = selectedSoundUrl;
             // 選択中の効果音を検索
             const currentSounds = soundsByGenre[selectedSoundGenre] || [];
-            selectedSound = currentSounds.find(s => s.url === selectedSoundUrl);
+            const selectedSound = currentSounds.find(s => s.url === selectedSoundUrl);
             
             // 効果音が見つかれば、その発射回数を使用
             if (selectedSound) {
               burstCount = selectedSound.burstCount;
             }
           }
-          
-          if (soundUrl) {
-            const audio = new Audio(soundUrl);
-            audio.volume = 0.5;
-            audio.play().catch(e => console.log('効果音再生エラー:', e));
-          }
-        } catch (e) {
-          console.log('効果音の処理中にエラー:', e);
         }
+      } catch (e) {
+        console.log('発射回数の決定中にエラー:', e);
       }
       
       console.log(`おなら発射回数: ${burstCount}回`);
-      
+
       // 発射回数分ループして煙を生成
       for (let burstIndex = 0; burstIndex < burstCount; burstIndex++) {
         // 各発射に少し遅延を加える（burstIntervalを使用）
@@ -890,7 +933,7 @@ function App() {
         }, burstIndex * (smokeSettings.burstInterval || 400)); // 設定された発射間隔を使用
       }
     } catch (error) {
-      console.error('煙生成エラー:', error);
+      console.error('おなら生成エラー:', error);
       setHasError(true);
     } finally {
       // 処理中フラグを解除
@@ -898,12 +941,13 @@ function App() {
         setIsCreatingSmoke(false);
       }, 300);
     }
-  }, [isCreatingSmoke, spawnPoints, isSoundOn, selectedSoundUrl, isRandomSoundInGenre, selectedSoundGenre, soundsByGenre, smokeSettings, colorSettings, spawnMode, currentSequentialIndex, addParticle, addSpawnPoint, createBubbleEffect, createCloudEffect]);
+  }, [isCreatingSmoke, displaySettings, vibrationStrength, spawnPoints, isSoundOn, isRandomSoundInGenre, selectedSoundGenre, soundsByGenre, selectedSoundUrl, spawnMode, currentSequentialIndex, addParticle, addSpawnPoint, createBubbleEffect, createCloudEffect, smokeSettings, colorSettings]);
 
   // メイン画面のクリックイベント処理関数
   const handleInteraction = useCallback((x, y) => {
     createSmokeBurst(x, y);
   }, [createSmokeBurst]);
+
   // アプリケーション開始
   const startApp = () => {
     setIsStarted(true);
@@ -959,6 +1003,7 @@ function App() {
       </div>
     );
   }
+
   return (
     <AppContainer>
       {!isStarted ? (
@@ -1125,6 +1170,10 @@ function App() {
               setAutoFartRandomPosition={setAutoFartRandomPosition}
               autoFartSoundOption={autoFartSoundOption}
               setAutoFartSoundOption={setAutoFartSoundOption}
+              displaySettings={displaySettings}
+              setDisplaySettings={setDisplaySettings}
+              vibrationStrength={vibrationStrength}
+              setVibrationStrength={setVibrationStrength}
               onClose={() => setIsSettingsPanelOpen(false)}
             />
           )}

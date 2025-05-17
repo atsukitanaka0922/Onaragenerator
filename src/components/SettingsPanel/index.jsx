@@ -7,6 +7,7 @@ import SpawnPointSettings from './SpawnPointSettings';
 import BackgroundSettings from './BackgroundSettings';
 import AdvancedSoundSettings from './AdvancedSoundSettings';
 import AutoFartSettings from './AutoFartSettings';
+import DisplaySettings from './DisplaySettings';
 import ReadmeContent from './ReadmeContent';
 
 const Panel = styled.div`
@@ -95,6 +96,10 @@ function SettingsPanel({
   setAutoFartRandomPosition,
   autoFartSoundOption,
   setAutoFartSoundOption,
+  displaySettings,
+  setDisplaySettings,
+  vibrationStrength,
+  setVibrationStrength,
   onClose
 }) {
   const [activeTab, setActiveTab] = useState('smoke');
@@ -146,6 +151,12 @@ function SettingsPanel({
           onClick={() => setActiveTab('spawn')}
         >
           スポーン
+        </Tab>
+        <Tab 
+          active={activeTab === 'display'} 
+          onClick={() => setActiveTab('display')}
+        >
+          表示
         </Tab>
         <Tab 
           active={activeTab === 'auto'} 
@@ -215,6 +226,15 @@ function SettingsPanel({
             deactivateAllSpawnPoints={deactivateAllSpawnPoints}
             spawnMode={spawnMode}
             setSpawnMode={setSpawnMode}
+          />
+        )}
+        
+        {activeTab === 'display' && (
+          <DisplaySettings 
+            displaySettings={displaySettings}
+            setDisplaySettings={setDisplaySettings}
+            vibrationStrength={vibrationStrength}
+            setVibrationStrength={setVibrationStrength}
           />
         )}
         
