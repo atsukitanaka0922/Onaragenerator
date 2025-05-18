@@ -314,7 +314,7 @@ function App() {
     console.log(`スポーン地点を追加しました: ID=${newSpawnPoint.id}, x=${x}, y=${y}`);
     return newSpawnPoint.id;
   };
-  
+
   // スポーン地点の位置を更新
   const updateSpawnPointPosition = (id, x, y) => {
     // 重要: スポーン地点が実際に存在するかを確認
@@ -483,7 +483,7 @@ function App() {
     return sounds[randomIndex].url;
   };
 
-  // オートおなら機能のトグル関数
+  // 自動おなら機能のトグル関数
   const toggleAutoFart = () => {
     if (!isAutoFartEnabled) {
       // オートおなら開始
@@ -496,58 +496,69 @@ function App() {
   
   // オートおなら開始関数
   const startAutoFart = () => {
+    // すでにタイマーが存在する場合はクリア
     if (autoFartIntervalRef.current) {
       clearInterval(autoFartIntervalRef.current);
+      autoFartIntervalRef.current = null;
     }
 
-    // インターバルをセット
-    autoFartIntervalRef.current = setInterval(() => {
-      // スポーン地点がなければ何もしない
-      if (spawnPoints.length === 0) return;
+    // 重要: 煙生成中フラグをリセット
+    setIsCreatingSmoke(false);
+    
+    // 少し遅延を入れてからインターバルを設定
+    setTimeout(() => {
+      // インターバルをセット
+      autoFartIntervalRef.current = setInterval(() => {
+        // スポーン地点がなければ何もしない
+        if (spawnPoints.length === 0) return;
 
-      // おならの発生位置を決定
-      let targetX, targetY;
-      
-      if (autoFartRandomPosition) {
-        // ランダムな位置
-        targetX = Math.random() * window.innerWidth;
-        targetY = Math.random() * window.innerHeight;
-      } else {
-        // 画面中央
-        targetX = window.innerWidth / 2;
-        targetY = window.innerHeight / 2;
-      }
-
-      // 効果音設定の適用 - ディープコピーで現在の値を保存
-      const originalState = {
-        soundUrl: selectedSoundUrl,
-        soundGenre: selectedSoundGenre,
-        randomInGenre: isRandomSoundInGenre
-      };
-      
-      // 自動おならのサウンドオプションに基づいて一時的に設定を変更
-      if (autoFartSoundOption === 'random') {
-        // 現在のジャンルからランダム選択を有効にする
-        setIsRandomSoundInGenre(true);
-      } else if (autoFartSoundOption === 'randomAll') {
-        // 全ジャンルからランダム
-        const allGenres = Object.keys(soundsByGenre);
-        if (allGenres.length > 0) {
-          // 実際にランダムなジャンルを選択
-          const randomGenre = allGenres[Math.floor(Math.random() * allGenres.length)];
-          console.log(`自動おなら: ランダムジャンル「${randomGenre}」を選択`);
-          
-          // ジャンルを変更
-          setSelectedSoundGenre(randomGenre);
-          
-          // ランダム再生を有効化
-          setIsRandomSoundInGenre(true);
+        // ここで煙生成中フラグをチェック
+        if (isCreatingSmoke) {
+          console.log('煙生成処理中のため、自動おなら生成をスキップします');
+          return; // 処理中なら何もしない
         }
-      }
 
-      // 少し遅延させてからおならを発生させる（状態更新が反映されるのを待つ）
-      setTimeout(() => {
-        // おならを発生させる（既存のスポーンモード機能を利用）
+        // おならの発生位置を決定
+        let targetX, targetY;
+        
+        if (autoFartRandomPosition) {
+          // ランダムな位置
+          targetX = Math.random() * window.innerWidth;
+          targetY = Math.random() * window.innerHeight;
+        } else {
+          // 画面中央
+          targetX = window.innerWidth / 2;
+          targetY = window.innerHeight / 2;
+        }
+
+        // 効果音設定の適用 - ディープコピーで現在の値を保存
+        const originalState = {
+          soundUrl: selectedSoundUrl,
+          soundGenre: selectedSoundGenre,
+          randomInGenre: isRandomSoundInGenre
+        };
+        
+        // 自動おならのサウンドオプションに基づいて一時的に設定を変更
+        if (autoFartSoundOption === 'random') {
+          // 現在のジャンルからランダム選択を有効にする
+          setIsRandomSoundInGenre(true);
+        } else if (autoFartSoundOption === 'randomAll') {
+          // 全ジャンルからランダム
+          const allGenres = Object.keys(soundsByGenre);
+          if (allGenres.length > 0) {
+            // 実際にランダムなジャンルを選択
+            const randomGenre = allGenres[Math.floor(Math.random() * allGenres.length)];
+            console.log(`自動おなら: ランダムジャンル「${randomGenre}」を選択`);
+            
+            // ジャンルを変更
+            setSelectedSoundGenre(randomGenre);
+            
+            // ランダム再生を有効化
+            setIsRandomSoundInGenre(true);
+          }
+        }
+
+        // おならを発生させる
         createSmokeBurst(targetX, targetY);
         
         // 効果音設定を元に戻す（少し遅延させる）
@@ -556,20 +567,26 @@ function App() {
           setSelectedSoundGenre(originalState.soundGenre);
           setIsRandomSoundInGenre(originalState.randomInGenre);
         }, 500);
-      }, 50);
+        
+      }, autoFartInterval * 1000);
       
-    }, autoFartInterval * 1000);
-    
-    // 状態を更新
-    setIsAutoFartEnabled(true);
+      // 状態を更新
+      setIsAutoFartEnabled(true);
+    }, 100); // 100msの遅延を入れる
   };
 
   // オートおなら停止関数
   const stopAutoFart = () => {
+    // タイマーをクリア
     if (autoFartIntervalRef.current) {
       clearInterval(autoFartIntervalRef.current);
       autoFartIntervalRef.current = null;
     }
+    
+    // 煙生成中フラグをリセット
+    setIsCreatingSmoke(false);
+    
+    // 状態を更新
     setIsAutoFartEnabled(false);
   };
   
@@ -604,13 +621,25 @@ function App() {
     // 既に実行中なら処理しない
     if (isCreatingSmoke) {
       console.log('煙生成処理中のため、リクエストをスキップします');
-      return;
+      // 重要な修正: 長時間処理中の場合はフラグをリセット
+      const now = Date.now();
+      const lastInteractionTime = lastInteractionTimeRef.current || 0;
+        
+      // 2秒以上経過していればフラグをリセット
+      if (now - lastInteractionTime > 2000) {
+        console.log('前回の処理から2秒以上経過しているため、処理フラグをリセットします');
+        setIsCreatingSmoke(false);
+        // この場合は処理を継続する
+      } else {
+        return; // 処理中で時間経過も短いなら何もしない
+      }
     }
-    
-    console.log(`おなら発生: 目標位置 x=${x}, y=${y}, 設定:`, displaySettings);
     
     // 処理中フラグを立てる
     setIsCreatingSmoke(true);
+    
+    // 現在時刻を記録
+    lastInteractionTimeRef.current = Date.now();
     
     try {
       // 振動機能の処理
@@ -727,7 +756,7 @@ function App() {
         default:
           spawnPointsToUse = activeSpawnPoints;
       }
-        
+
       console.log(`使用するスポーン地点: ${spawnPointsToUse.length}箇所`);
         
       // 発射回数を決定
@@ -834,8 +863,8 @@ function App() {
                   }, i * (60 / burstSpeed)); // burstSpeedで遅延時間を調整
                 }
                 break;
-                
-              case 'ring':
+
+                case 'ring':
                 // リングエフェクト
                 console.log(`スポーン地点 ${spawn.id} からリングエフェクトを生成`);
                 for (let i = 0; i < particleCount; i++) {
@@ -943,8 +972,8 @@ function App() {
                   }
                 }
                 break;
-                
-              case 'normal':
+
+                case 'normal':
               default:
                 // 通常エフェクト
                 console.log(`スポーン地点 ${spawn.id} から通常エフェクトを生成: (${spawn.x}, ${spawn.y}) → 目標: (${x}, ${y})`);
@@ -968,13 +997,15 @@ function App() {
     } catch (error) {
       console.error('おなら生成エラー:', error);
       setHasError(true);
+      // エラー時にもフラグをリセット
+      setIsCreatingSmoke(false);
     } finally {
-      // 処理中フラグを解除 - 短縮版
-      const baseDelay = 400; // ベースの遅延時間を短縮
+      // 処理中フラグを解除 - より短い時間に調整
+      const baseDelay = 300; // ベースの遅延時間をさらに短縮
       const burstDelay = (smokeSettings.burstInterval || 200) * (burstCount || 1);
       
-      // 最大1000msに制限
-      const delayTime = Math.min(1000, Math.max(baseDelay, burstDelay));
+      // 最大800msに制限（従来の1000msから短縮）
+      const delayTime = Math.min(800, Math.max(baseDelay, burstDelay));
       
       console.log(`煙生成処理フラグのリセット予定時間: ${delayTime}ms`);
       
@@ -1041,7 +1072,7 @@ function App() {
     );
   }
 
-return (
+  return (
     <AppContainer>
       {!isStarted ? (
         <StartScreen>
