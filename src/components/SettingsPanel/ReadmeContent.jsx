@@ -159,7 +159,7 @@ function ReadmeContent() {
       
       <Section>
         <SectionTitle>バージョン情報</SectionTitle>
-        <p>おならじぇねれーたー v1.3.0</p>
+        <p>おならじぇねれーたー v1.3.1</p>
         <p>バグ報告や要望などはXアカウント@Onara_generatorまで</p>
         <p>© 2025 とあるフェチクリエイター</p>
       </Section>
