@@ -142,6 +142,12 @@ const InfoBox = styled.div`
   font-size: 0.9rem;
 `;
 
+const Divider = styled.div`
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 20px 0;
+`;
+
 function DisplaySettings({ 
   displaySettings, 
   setDisplaySettings,
@@ -166,6 +172,14 @@ function DisplaySettings({
   // 振動強度の変更ハンドラ
   const handleVibrationStrengthChange = (e) => {
     setVibrationStrength(e.target.value);
+  };
+
+  // 画面振動強度の変更ハンドラ
+  const handleScreenShakeStrengthChange = (e) => {
+    setDisplaySettings({
+      ...displaySettings,
+      screenShakeStrength: e.target.value
+    });
   };
   
   return (
@@ -205,7 +219,7 @@ function DisplaySettings({
         
         <ToggleRow>
           <ToggleLabel>
-            <ToggleName>振動</ToggleName>
+            <ToggleName>デバイス振動</ToggleName>
             <ToggleDescription>
               おなら時にデバイスを振動させる
               {!vibrationSupported && ' (※このデバイスでは未対応)'}
@@ -221,11 +235,29 @@ function DisplaySettings({
             <span className="slider"></span>
           </ToggleSwitch>
         </ToggleRow>
+
+        {/* 新しく追加する画面振動の設定 */}
+        <ToggleRow>
+          <ToggleLabel>
+            <ToggleName>画面振動</ToggleName>
+            <ToggleDescription>
+              おなら時に画面を揺らす効果を有効にする
+            </ToggleDescription>
+          </ToggleLabel>
+          <ToggleSwitch>
+            <input 
+              type="checkbox" 
+              checked={displaySettings.screenShake} 
+              onChange={(e) => handleDisplaySettingChange('screenShake', e.target.checked)}
+            />
+            <span className="slider"></span>
+          </ToggleSwitch>
+        </ToggleRow>
       </ToggleGroup>
       
       {displaySettings.vibration && vibrationSupported && (
         <VibrationStrengthContainer>
-          <h5>振動の強さ</h5>
+          <h5>デバイス振動の強さ</h5>
           <RadioGroup>
             <RadioButton selected={vibrationStrength === 'short'}>
               <input 
@@ -301,6 +333,89 @@ function DisplaySettings({
           </RadioGroup>
         </VibrationStrengthContainer>
       )}
+
+      {/* 画面振動の強さ設定（新規追加） */}
+      {displaySettings.screenShake && (
+        <VibrationStrengthContainer>
+          <h5>画面振動の強さ</h5>
+          <RadioGroup>
+            <RadioButton selected={displaySettings.screenShakeStrength === 'subtle'}>
+              <input 
+                type="radio" 
+                name="screenShakeStrength" 
+                value="subtle" 
+                checked={displaySettings.screenShakeStrength === 'subtle'}
+                onChange={handleScreenShakeStrengthChange}
+              />
+              <span>📱</span>
+              <span className="radio-label">控えめ</span>
+            </RadioButton>
+            
+            <RadioButton selected={displaySettings.screenShakeStrength === 'short'}>
+              <input 
+                type="radio" 
+                name="screenShakeStrength" 
+                value="short" 
+                checked={displaySettings.screenShakeStrength === 'short'}
+                onChange={handleScreenShakeStrengthChange}
+              />
+              <span>📱💨</span>
+              <span className="radio-label">弱め</span>
+            </RadioButton>
+            
+            <RadioButton selected={displaySettings.screenShakeStrength === 'medium'}>
+              <input 
+                type="radio" 
+                name="screenShakeStrength" 
+                value="medium" 
+                checked={displaySettings.screenShakeStrength === 'medium' || !displaySettings.screenShakeStrength}
+                onChange={handleScreenShakeStrengthChange}
+              />
+              <span>📱💨💨</span>
+              <span className="radio-label">普通</span>
+            </RadioButton>
+            
+            <RadioButton selected={displaySettings.screenShakeStrength === 'long'}>
+              <input 
+                type="radio" 
+                name="screenShakeStrength" 
+                value="long" 
+                checked={displaySettings.screenShakeStrength === 'long'}
+                onChange={handleScreenShakeStrengthChange}
+              />
+              <span>📱💨💨💨</span>
+              <span className="radio-label">強め</span>
+            </RadioButton>
+            
+            <RadioButton selected={displaySettings.screenShakeStrength === 'explosive'}>
+              <input 
+                type="radio" 
+                name="screenShakeStrength" 
+                value="explosive" 
+                checked={displaySettings.screenShakeStrength === 'explosive'}
+                onChange={handleScreenShakeStrengthChange}
+              />
+              <span>📱💥</span>
+              <span className="radio-label">爆発的</span>
+            </RadioButton>
+            
+            <RadioButton selected={displaySettings.screenShakeStrength === 'random'}>
+              <input 
+                type="radio" 
+                name="screenShakeStrength" 
+                value="random" 
+                checked={displaySettings.screenShakeStrength === 'random'}
+                onChange={handleScreenShakeStrengthChange}
+              />
+              <span>🎲</span>
+              <span className="radio-label">ランダム</span>
+            </RadioButton>
+          </RadioGroup>
+          <div style={{ marginTop: '10px', fontSize: '0.9rem', opacity: 0.7 }}>
+            ※画面振動はCPUによる処理が必要です。モバイルデバイスでのパフォーマンスに影響する場合があります。
+          </div>
+        </VibrationStrengthContainer>
+      )}
       
       {/* デバイスが振動をサポートしない場合の情報 */}
       {!vibrationSupported && displaySettings.vibration && (
@@ -309,17 +424,59 @@ function DisplaySettings({
         </InfoBox>
       )}
       
+      <Divider />
+      
       {/* 現在の設定の組み合わせを表示 */}
-      <div style={{ marginTop: '20px', fontSize: '0.9rem', opacity: 0.8 }}>
-        現在の設定: 
-        {displaySettings.showSmoke && displaySettings.playSound && displaySettings.vibration && '煙 + 音 + 振動'}
-        {displaySettings.showSmoke && displaySettings.playSound && !displaySettings.vibration && '煙 + 音'}
-        {displaySettings.showSmoke && !displaySettings.playSound && displaySettings.vibration && '煙 + 振動'}
-        {!displaySettings.showSmoke && displaySettings.playSound && displaySettings.vibration && '音 + 振動'}
-        {displaySettings.showSmoke && !displaySettings.playSound && !displaySettings.vibration && '煙のみ'}
-        {!displaySettings.showSmoke && displaySettings.playSound && !displaySettings.vibration && '音のみ'}
-        {!displaySettings.showSmoke && !displaySettings.playSound && displaySettings.vibration && '振動のみ'}
-        {!displaySettings.showSmoke && !displaySettings.playSound && !displaySettings.vibration && 'すべてオフ'}
+      <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+        <div style={{ marginBottom: '5px' }}>有効な効果:</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+          {displaySettings.showSmoke && (
+            <span style={{ 
+              padding: '3px 8px', 
+              backgroundColor: 'rgba(76, 175, 80, 0.2)', 
+              borderRadius: '12px' 
+            }}>
+              煙効果
+            </span>
+          )}
+          {displaySettings.playSound && (
+            <span style={{ 
+              padding: '3px 8px', 
+              backgroundColor: 'rgba(33, 150, 243, 0.2)', 
+              borderRadius: '12px' 
+            }}>
+              効果音
+            </span>
+          )}
+          {displaySettings.vibration && vibrationSupported && (
+            <span style={{ 
+              padding: '3px 8px', 
+              backgroundColor: 'rgba(156, 39, 176, 0.2)', 
+              borderRadius: '12px' 
+            }}>
+              デバイス振動
+            </span>
+          )}
+          {displaySettings.screenShake && (
+            <span style={{ 
+              padding: '3px 8px', 
+              backgroundColor: 'rgba(255, 152, 0, 0.2)', 
+              borderRadius: '12px' 
+            }}>
+              画面振動
+            </span>
+          )}
+          {!displaySettings.showSmoke && !displaySettings.playSound && 
+           (!displaySettings.vibration || !vibrationSupported) && !displaySettings.screenShake && (
+            <span style={{ 
+              padding: '3px 8px', 
+              backgroundColor: 'rgba(244, 67, 54, 0.2)', 
+              borderRadius: '12px' 
+            }}>
+              すべてオフ
+            </span>
+          )}
+        </div>
       </div>
     </SettingsGroup>
   );

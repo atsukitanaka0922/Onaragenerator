@@ -7,6 +7,7 @@ import SettingsPanel from './components/SettingsPanel';
 import SpawnPoint from './components/SpawnPoint';
 import SpawnIndicator from './components/SpawnIndicator';
 import { vibrate, getFartVibrationPattern, isVibrationSupported } from './utils/vibrationUtils';
+import { shakeScreen, getFartShakePattern, initShake } from './utils/screenShakeUtils';
 
 const AppContainer = styled.div`
   width: 100%;
@@ -81,6 +82,9 @@ const AutoFartButton = styled.button`
 `;
 
 function App() {
+  // 最後のインタラクション時刻を追跡するref
+  const lastInteractionTimeRef = useRef(0);
+  
   // エラー状態
   const [hasError, setHasError] = useState(false);
   
@@ -92,15 +96,17 @@ function App() {
   const [backgroundImage, setBackgroundImage] = useState('');
   const [isCreatingSmoke, setIsCreatingSmoke] = useState(false);
   
-  // 表示設定（v1.3.0で追加）
+  // 表示設定
   const [displaySettings, setDisplaySettings] = useState({
     showSmoke: true,    // 煙を表示するかどうか
     playSound: true,    // 音を鳴らすかどうか
-    vibration: true     // 振動させるかどうか
+    vibration: true,    // 振動させるかどうか
+    screenShake: true,  // 画面振動（初期値はオン）
+    screenShakeStrength: 'medium' // 画面振動の強さ（初期値は普通）
   });
   const [vibrationStrength, setVibrationStrength] = useState('medium'); // 振動の強さ: 'short', 'medium', 'long', 'explosive', 'subtle', 'random'
   
-  // スポーン地点（先に宣言）
+  // スポーン地点
   const [spawnPoints, setSpawnPoints] = useState([]);
   const [nextSpawnId, setNextSpawnId] = useState(1);
   
@@ -115,7 +121,7 @@ function App() {
     speed: 1.0,
     duration: 3.0,
     effectType: 'normal',
-    burstInterval: 400, // 連続発射の間隔（ミリ秒）
+    burstInterval: 200, // 連続発射の間隔（ミリ秒）- 200msに短縮
     burstSpeed: 1.0,    // 連続発射の速度倍率
     options: {
       fade: true,
@@ -134,7 +140,7 @@ function App() {
   
   // 煙パーティクル
   const [particles, setParticles] = useState([]);
-  
+
   // 効果音関連の状態
   const [selectedSoundUrl, setSelectedSoundUrl] = useState('/sounds/small1.mp3');
   const [selectedSoundGenre, setSelectedSoundGenre] = useState('medium');
@@ -165,6 +171,11 @@ function App() {
       id: 'sneaky',
       name: 'Sneaky',
       description: 'すかしっぺ'
+    },
+    {
+      id: 'bath',
+      name: 'Bath',
+      description: 'お風呂っ屁'
     }
   ];
 
@@ -238,6 +249,11 @@ function App() {
       { id: 'sneaky2', url: '/sounds/sneaky2.mp3', name: 'Sneaky 2', burstCount: 1 },
       { id: 'sneaky3', url: '/sounds/sneaky3.mp3', name: 'Sneaky 3', burstCount: 1 },
       { id: 'sneaky4', url: '/sounds/sneaky4.mp3', name: 'Sneaky 4', burstCount: 1 }
+    ],
+    bath: [
+      { id: 'bath1', url: '/sounds/bath1.mp3', name: 'Bath 1', burstCount: 1 },
+      { id: 'bath2', url: '/sounds/bath2.mp3', name: 'Bath 2', burstCount: 1 },
+      { id: 'bath3', url: '/sounds/bath3.mp3', name: 'Bath 3', burstCount: 1 }
     ]
   });
   
@@ -247,6 +263,26 @@ function App() {
   const [autoFartRandomPosition, setAutoFartRandomPosition] = useState(true);
   const [autoFartSoundOption, setAutoFartSoundOption] = useState('current'); // 'current', 'random', 'randomAll'
   const autoFartIntervalRef = useRef(null);
+
+  // 初期化処理
+  useEffect(() => {
+    // ライブラリの初期化
+    console.log('アプリケーションの初期化を行います...');
+    
+    try {
+      // 画面振動ライブラリの初期化
+      initShake();
+    } catch (error) {
+      console.error('振動ライブラリの初期化に失敗しました:', error);
+    }
+    
+    console.log('アプリケーションの初期化が完了しました');
+  }, []);
+
+  // isCreatingSmoke の状態変化をモニタリング
+  useEffect(() => {
+    console.log(`煙生成処理フラグの状態変更: ${isCreatingSmoke}`);
+  }, [isCreatingSmoke]);
 
   // 効果音の発射回数を更新する関数
   const updateSoundBurstCount = (genreId, soundId, newCount) => {
@@ -345,7 +381,7 @@ function App() {
   };
 
   // スポーン地点をタップするための処理を追加
-  const handleSpawnPointDrag = useCallback((id, x, y) => {
+  const handleSpawnPointDrag = (id, x, y) => {
     console.log(`スポーン地点の移動: ID=${id}, x=${x}, y=${y}`);
     // 座標が有効な値かチェック
     if (isNaN(x) || isNaN(y)) {
@@ -358,10 +394,10 @@ function App() {
     const safeY = Math.max(0, Math.min(window.innerHeight, y));
     
     updateSpawnPointPosition(id, safeX, safeY);
-  }, [updateSpawnPointPosition]);
+  };
 
   // 煙パーティクルの追加
-  const addParticle = useCallback((spawnX, spawnY, targetX, targetY, customColor = null) => {
+  const addParticle = (spawnX, spawnY, targetX, targetY, customColor = null) => {
     try {
       const newId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
       
@@ -384,11 +420,11 @@ function App() {
       console.log(`パーティクル追加: ID=${newId}, 開始=(${spawnX},${spawnY}), 目標=(${targetX},${targetY}), 色=${newParticle.color}`);
       
       // パーティクルを追加
-      setParticles(prev => [...prev, newParticle]);
+      setParticles(prevParticles => [...prevParticles, newParticle]);
       
       // 一定時間後に自動的に削除
       setTimeout(() => {
-        setParticles(prev => prev.filter(p => p.id !== newId));
+        setParticles(prevParticles => prevParticles.filter(p => p.id !== newId));
       }, smokeSettings.duration * 1000);
       
       return newId;
@@ -396,7 +432,7 @@ function App() {
       console.error('パーティクル追加エラー:', error);
       return null;
     }
-  }, [smokeSettings.size, smokeSettings.duration, colorSettings.mainColor]);
+  };
   
   // 黄色い煙を作成（泡が弾けたときのエフェクト）- カスタム色対応
   const createYellowSmoke = (x, y, customColor = null) => {
@@ -437,142 +473,18 @@ function App() {
       }, 800);
     }
   };
-  
-  // 泡エフェクト生成関数
-  const createBubbleEffect = (spawn, targetX, targetY, particleCount, settings, customColor = null) => {
-    console.log(`スポーン地点 ${spawn.id} から泡エフェクトを生成`);
-    
-    for (let i = 0; i < particleCount; i++) {
-      // 上昇角度をランダムに（垂直方向を中心に少しずれる）
-      const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI/4;
-      
-      // 上昇距離をランダムに
-      const distance = 100 + Math.random() * 150;
-      
-      // 目標位置を計算 - スポーン地点からまっすぐ上に上昇するよう修正
-      // 横方向の揺れは小さく
-      const bubbleTargetX = spawn.x + (Math.random() * 40 - 20); // 小さな左右の揺れ
-      const bubbleTargetY = spawn.y - distance; // 上方向に移動（Y座標は上が小さくなる）
-      
-      // 少し遅延させて生成
-      setTimeout(() => {
-        // 泡の特性を設定
-        const bubbleId = `bubble-${Date.now()}-${Math.random()}`;
-        const bubbleSize = settings.size * (0.8 + Math.random() * 0.4);
-        const popTime = settings.duration * 1000 * (0.3 + Math.random() * 0.4); // 泡が弾ける時間
-        
-        // 泡パーティクルを追加
-        const bubbleParticle = {
-          id: bubbleId,
-          x: spawn.x,
-          y: spawn.y,
-          targetX: bubbleTargetX,
-          targetY: bubbleTargetY,
-          size: bubbleSize,
-          opacity: 0.7,
-          isBubble: true, // 泡フラグ
-          popTime: popTime,
-          duration: settings.duration,
-          color: customColor // カスタム色を設定
-        };
-        
-        // パーティクルリストに追加
-        setParticles(prev => [...prev, bubbleParticle]);
-        
-        // 泡が弾ける効果
-        if (settings.options.trail) {
-          setTimeout(() => {
-            // 現在のパーティクル位置を取得
-            const bubbleElement = document.getElementById(`particle-${bubbleId}`);
-            if (bubbleElement) {
-              const rect = bubbleElement.getBoundingClientRect();
-              // 黄色い煙を生成（カスタム色にも対応）
-              createYellowSmoke(rect.left + rect.width / 2, rect.top + rect.height / 2, customColor);
-            }
-            
-            // 泡を消す
-            setParticles(prev => prev.filter(p => p.id !== bubbleId));
-          }, popTime);
-        } else {
-          // 通常の削除（アニメーション完了後）
-          setTimeout(() => {
-            setParticles(prev => prev.filter(p => p.id !== bubbleId));
-          }, settings.duration * 1000);
-        }
-      }, i * (50 / (settings.burstSpeed || 1.0))); // パーティクルごとに少し遅延（burstSpeedを適用）
-    }
-  };
-
-  // 霧状エフェクト生成関数
-  const createCloudEffect = (spawn, targetX, targetY, particleCount, settings, customColor = null) => {
-    console.log(`スポーン地点 ${spawn.id} から霧状エフェクトを生成`);
-    
-    // 霧の層数（trail オプションが有効ならより多くの層）
-    const layerCount = settings.options.trail ? 5 : 3;
-    const particlesPerLayer = Math.ceil(particleCount / layerCount);
-    
-    // 各層ごとに処理
-    for (let layer = 0; layer < layerCount; layer++) {
-      // 層ごとの遅延（burstSpeedを適用）
-      const layerDelay = layer * (120 / (settings.burstSpeed || 1.0));
-      
-      setTimeout(() => {
-        // 各層ごとにパーティクルを放射状に配置
-        for (let i = 0; i < particlesPerLayer; i++) {
-          // 円周上に均等に配置
-          const angle = (i / particlesPerLayer) * Math.PI * 2;
-          
-          // 層ごとにサイズを変える（内側の層ほど小さく）
-          const layerSizeFactor = 0.7 + (layer / layerCount * 0.6);
-          
-          // 距離も層ごとに変える（外側の層ほど遠く）
-          const distance = settings.size * (0.5 + layer * 0.5);
-          
-          // 目標位置の計算
-          const cloudTargetX = spawn.x + Math.cos(angle) * distance;
-          
-          // 上昇効果（gravityオプションが有効なら）
-          const riseEffect = settings.options.gravity ? -50 - layer * 20 : 0;
-          const cloudTargetY = spawn.y + Math.sin(angle) * distance + riseEffect;
-          
-          // 霧パーティクルを追加（特殊なIDを付与）
-          const cloudId = `cloud-${Date.now()}-${Math.random()}`;
-          const cloudParticle = {
-            id: cloudId,
-            x: spawn.x,
-            y: spawn.y, 
-            targetX: cloudTargetX,
-            targetY: cloudTargetY,
-            size: settings.size * layerSizeFactor * (0.7 + Math.random() * 0.6),
-            opacity: settings.options.fade ? 0.9 : 0.6, // fadeオプションで濃度調整
-            isCloud: true, // 特殊フラグを設定
-            blurAmount: settings.options.pulsate ? 10 : 5, // pulsateオプションでぼかし調整
-            color: customColor // カスタム色を設定
-          };
-          
-          // 霧を追加
-          setParticles(prev => [...prev, cloudParticle]);
-          
-          // アニメーション終了後に削除
-          setTimeout(() => {
-            setParticles(prev => prev.filter(p => p.id !== cloudId));
-          }, settings.duration * 1000);
-        }
-      }, layerDelay);
-    }
-  };
 
   // ジャンルからランダムに効果音を選択する関数
-  const getRandomSoundFromGenre = useCallback((genreId) => {
+  const getRandomSoundFromGenre = (genreId) => {
     const sounds = soundsByGenre[genreId] || [];
     if (sounds.length === 0) return null;
     
     const randomIndex = Math.floor(Math.random() * sounds.length);
     return sounds[randomIndex].url;
-  }, [soundsByGenre]);
+  };
 
   // オートおなら機能のトグル関数
-  const toggleAutoFart = useCallback(() => {
+  const toggleAutoFart = () => {
     if (!isAutoFartEnabled) {
       // オートおなら開始
       startAutoFart();
@@ -580,10 +492,10 @@ function App() {
       // オートおなら停止
       stopAutoFart();
     }
-  }, [isAutoFartEnabled]);
+  };
   
   // オートおなら開始関数
-  const startAutoFart = useCallback(() => {
+  const startAutoFart = () => {
     if (autoFartIntervalRef.current) {
       clearInterval(autoFartIntervalRef.current);
     }
@@ -650,19 +562,45 @@ function App() {
     
     // 状態を更新
     setIsAutoFartEnabled(true);
-  }, [autoFartInterval, autoFartRandomPosition, autoFartSoundOption, spawnPoints, selectedSoundUrl, selectedSoundGenre, isRandomSoundInGenre, soundsByGenre, setSelectedSoundUrl, setSelectedSoundGenre, setIsRandomSoundInGenre]);
+  };
 
   // オートおなら停止関数
-  const stopAutoFart = useCallback(() => {
+  const stopAutoFart = () => {
     if (autoFartIntervalRef.current) {
       clearInterval(autoFartIntervalRef.current);
       autoFartIntervalRef.current = null;
     }
     setIsAutoFartEnabled(false);
-  }, []);
+  };
+  
+  // メイン画面のクリックイベント処理関数 - 待機時間を短縮
+  const handleInteraction = (x, y) => {
+    console.log(`メイン画面のインタラクション: x=${x}, y=${y}`);
+    
+    // 処理中フラグが立っているが、前回の処理から一定時間経過している場合はリセット
+    if (isCreatingSmoke) {
+      const now = Date.now();
+      const lastInteractionTime = lastInteractionTimeRef.current || 0;
+      
+      // 1秒以上経過していればフラグをリセット（3秒から1秒に変更）
+      if (now - lastInteractionTime > 1000) {
+        console.log('前回の処理から1秒以上経過しているため、処理フラグをリセットします');
+        setIsCreatingSmoke(false);
+      } else {
+        console.log('処理中のため、新しいリクエストをスキップします');
+        return; // 処理中なら何もしない
+      }
+    }
+    
+    // 現在時刻を記録
+    lastInteractionTimeRef.current = Date.now();
+    
+    // おなら生成処理を呼び出す
+    createSmokeBurst(x, y);
+  };
 
   // 煙のバースト生成 - 表示設定対応バージョン
-  const createSmokeBurst = useCallback((x, y) => {
+  const createSmokeBurst = (x, y) => {
     // 既に実行中なら処理しない
     if (isCreatingSmoke) {
       console.log('煙生成処理中のため、リクエストをスキップします');
@@ -679,7 +617,14 @@ function App() {
       if (displaySettings.vibration && isVibrationSupported()) {
         const pattern = getFartVibrationPattern(vibrationStrength);
         vibrate(pattern);
-        console.log(`振動パターン: ${pattern}`);
+        console.log(`デバイス振動パターン: ${pattern}`);
+      }
+      
+      // 画面振動機能の処理 - 簡略化
+      if (displaySettings.screenShake) {
+        console.log('画面振動を実行...');
+        const shakePattern = getFartShakePattern(displaySettings.screenShakeStrength || 'medium');
+        shakeScreen(shakePattern);
       }
       
       // 効果音再生
@@ -699,6 +644,7 @@ function App() {
           }
           
           if (soundUrl) {
+            console.log(`効果音を再生: ${soundUrl}`);
             const audio = new Audio(soundUrl);
             audio.volume = 0.5;
             audio.play().catch(e => console.log('効果音再生エラー:', e));
@@ -710,7 +656,7 @@ function App() {
       
       // 煙表示がオフの場合は、ここで処理を終了
       if (!displaySettings.showSmoke) {
-        // 処理フラグをリセット
+        console.log('煙表示は無効です。スキップします');
         setTimeout(() => {
           setIsCreatingSmoke(false);
         }, 300);
@@ -725,13 +671,16 @@ function App() {
       if (activeSpawnPoints.length === 0) {
         const id = addSpawnPoint(window.innerWidth / 2, window.innerHeight - 100);
         console.log(`緊急スポーン地点が追加されました: ID=${id}`);
+        
+        // 次回の処理のために処理中フラグを解除
         setIsCreatingSmoke(false);
         return;
       }
       
+      // ここから先は元の処理 - スポーンモードに基づいて...以降のコード
       // スポーンモードに基づいて使用するスポーン地点を選択
       let spawnPointsToUse = [];
-      
+        
       switch (spawnMode) {
         case 'simultaneous':
           // 全てのアクティブなスポーン地点を使用
@@ -778,12 +727,12 @@ function App() {
         default:
           spawnPointsToUse = activeSpawnPoints;
       }
-      
+        
       console.log(`使用するスポーン地点: ${spawnPointsToUse.length}箇所`);
-      
+        
       // 発射回数を決定
       let burstCount = 1; // デフォルトは1回
-      
+        
       try {
         if (isSoundOn && displaySettings.playSound) {
           if (isRandomSoundInGenre) {
@@ -792,27 +741,29 @@ function App() {
             if (sounds.length > 0) {
               const randomIndex = Math.floor(Math.random() * sounds.length);
               const selectedSound = sounds[randomIndex];
-              
+                
               // 発射回数を更新
-              burstCount = selectedSound.burstCount;
+              burstCount = selectedSound.burstCount || 1; // undefined の場合は 1 にする
             }
           } else {
             // 選択中の効果音を検索
             const currentSounds = soundsByGenre[selectedSoundGenre] || [];
             const selectedSound = currentSounds.find(s => s.url === selectedSoundUrl);
-            
+                
             // 効果音が見つかれば、その発射回数を使用
             if (selectedSound) {
-              burstCount = selectedSound.burstCount;
+              burstCount = selectedSound.burstCount || 1; // undefined の場合は 1 にする
             }
           }
         }
       } catch (e) {
         console.log('発射回数の決定中にエラー:', e);
+        burstCount = 1; // エラー時はデフォルト値に
       }
-      
+        
       console.log(`おなら発射回数: ${burstCount}回`);
 
+      // ここに実際の煙パーティクル生成コードを書く
       // 発射回数分ループして煙を生成
       for (let burstIndex = 0; burstIndex < burstCount; burstIndex++) {
         // 各発射に少し遅延を加える（burstIntervalを使用）
@@ -903,12 +854,94 @@ function App() {
               case 'bubble':
                 // 泡エフェクト - スポーン地点からのみ上昇するように修正
                 // カスタム色を設定して泡エフェクトを生成
-                createBubbleEffect(spawn, spawn.x, spawn.y - 200, particleCount, smokeSettings, spawnColor);
+                console.log('泡エフェクトを生成');
+                for (let i = 0; i < particleCount; i++) {
+                  // 上昇角度をランダムに（垂直方向を中心に少しずれる）
+                  const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI/4;
+                  
+                  // 上昇距離をランダムに
+                  const distance = 100 + Math.random() * 150;
+                  
+                  // 目標位置を計算
+                  const bubbleTargetX = spawn.x + (Math.random() * 40 - 20); // 小さな左右の揺れ
+                  const bubbleTargetY = spawn.y - distance; // 上方向に移動（Y座標は上が小さくなる）
+                  
+                  // 泡パーティクルを追加
+                  const bubbleParticle = {
+                    id: `bubble-${Date.now()}-${Math.random()}`,
+                    x: spawn.x,
+                    y: spawn.y,
+                    targetX: bubbleTargetX,
+                    targetY: bubbleTargetY,
+                    size: smokeSettings.size * (0.8 + Math.random() * 0.4),
+                    opacity: 0.7,
+                    isBubble: true, // 泡フラグ
+                    popTime: smokeSettings.duration * 1000 * (0.3 + Math.random() * 0.4),
+                    duration: smokeSettings.duration,
+                    color: spawnColor
+                  };
+                  
+                  // パーティクルリストに追加
+                  setParticles(prev => [...prev, bubbleParticle]);
+                  
+                  // 一定時間後に削除
+                  setTimeout(() => {
+                    setParticles(prev => prev.filter(p => p.id !== bubbleParticle.id));
+                  }, smokeSettings.duration * 1000);
+                }
                 break;
-              
-              case 'cloud':
-                // 霧状エフェクト - カスタム色を設定
-                createCloudEffect(spawn, x, y, particleCount, smokeSettings, spawnColor);
+
+                case 'cloud':
+                // 霧状エフェクト
+                console.log('霧状エフェクトを生成');
+                // 霧の層数
+                const layerCount = smokeSettings.options.trail ? 5 : 3;
+                const particlesPerLayer = Math.ceil(particleCount / layerCount);
+                
+                // 各層ごとに処理
+                for (let layer = 0; layer < layerCount; layer++) {
+                  // 各層ごとにパーティクルを放射状に配置
+                  for (let i = 0; i < particlesPerLayer; i++) {
+                    // 円周上に均等に配置
+                    const angle = (i / particlesPerLayer) * Math.PI * 2;
+                    
+                    // 層ごとにサイズを変える（内側の層ほど小さく）
+                    const layerSizeFactor = 0.7 + (layer / layerCount * 0.6);
+                    
+                    // 距離も層ごとに変える（外側の層ほど遠く）
+                    const distance = smokeSettings.size * (0.5 + layer * 0.5);
+                    
+                    // 目標位置の計算
+                    const cloudTargetX = spawn.x + Math.cos(angle) * distance;
+                    
+                    // 上昇効果（gravityオプションが有効なら）
+                    const riseEffect = smokeSettings.options.gravity ? -50 - layer * 20 : 0;
+                    const cloudTargetY = spawn.y + Math.sin(angle) * distance + riseEffect;
+                    
+                    // 霧パーティクルを追加
+                    const cloudId = `cloud-${Date.now()}-${Math.random()}`;
+                    const cloudParticle = {
+                      id: cloudId,
+                      x: spawn.x,
+                      y: spawn.y, 
+                      targetX: cloudTargetX,
+                      targetY: cloudTargetY,
+                      size: smokeSettings.size * layerSizeFactor * (0.7 + Math.random() * 0.6),
+                      opacity: smokeSettings.options.fade ? 0.9 : 0.6, // fadeオプションで濃度調整
+                      isCloud: true, // 特殊フラグを設定
+                      blurAmount: smokeSettings.options.pulsate ? 10 : 5, // pulsateオプションでぼかし調整
+                      color: spawnColor
+                    };
+                    
+                    // 霧を追加
+                    setParticles(prev => [...prev, cloudParticle]);
+                    
+                    // 一定時間後に削除
+                    setTimeout(() => {
+                      setParticles(prev => prev.filter(p => p.id !== cloudId));
+                    }, smokeSettings.duration * 1000);
+                  }
+                }
                 break;
                 
               case 'normal':
@@ -930,23 +963,27 @@ function App() {
                 break;
             }
           });
-        }, burstIndex * (smokeSettings.burstInterval || 400)); // 設定された発射間隔を使用
+        }, burstIndex * (smokeSettings.burstInterval || 200)); // 設定された発射間隔を使用
       }
     } catch (error) {
       console.error('おなら生成エラー:', error);
       setHasError(true);
     } finally {
-      // 処理中フラグを解除
+      // 処理中フラグを解除 - 短縮版
+      const baseDelay = 400; // ベースの遅延時間を短縮
+      const burstDelay = (smokeSettings.burstInterval || 200) * (burstCount || 1);
+      
+      // 最大1000msに制限
+      const delayTime = Math.min(1000, Math.max(baseDelay, burstDelay));
+      
+      console.log(`煙生成処理フラグのリセット予定時間: ${delayTime}ms`);
+      
       setTimeout(() => {
         setIsCreatingSmoke(false);
-      }, 300);
+        console.log('煙生成処理フラグをリセットしました');
+      }, delayTime);
     }
-  }, [isCreatingSmoke, displaySettings, vibrationStrength, spawnPoints, isSoundOn, isRandomSoundInGenre, selectedSoundGenre, soundsByGenre, selectedSoundUrl, spawnMode, currentSequentialIndex, addParticle, addSpawnPoint, createBubbleEffect, createCloudEffect, smokeSettings, colorSettings]);
-
-  // メイン画面のクリックイベント処理関数
-  const handleInteraction = useCallback((x, y) => {
-    createSmokeBurst(x, y);
-  }, [createSmokeBurst]);
+  };
 
   // アプリケーション開始
   const startApp = () => {
@@ -1004,7 +1041,7 @@ function App() {
     );
   }
 
-  return (
+return (
     <AppContainer>
       {!isStarted ? (
         <StartScreen>
